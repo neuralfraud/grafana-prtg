@@ -157,8 +157,8 @@ function (angular, _) {
                 channels.sort(function(a,b)
                 {
                    if (a.objid == -4) return 1;
-                   if (a.objid > b.channelid) return 1;
-                   if (a.objid < b.channelid) return -1;
+                   if (a.objid > b.objid) return 1;
+                   if (a.objid < b.objid) return -1;
                    return 0;
                 });
                 for (var i=0;i<channels.length;i++)

@@ -29,11 +29,10 @@ function (angular, _, dateMath) {
             this.url =      datasource.url;
             this.username = datasource.jsonData.prtgApiUser;
             this.password = datasource.jsonData.prtgApiPassword;
-            
+            this.useCache = datasource.jsonData.useCache || true;
+            this.cacheTimeoutMintues = datasource.jsonData.cacheTimeoutMinutes || 5;
             this.limitmetrics = datasource.meta.limitmetrics || 100;
-            
             this.prtgAPI = new PRTGAPI(this.url, this.username, this.password);
-
         }
         /**
          * Data Source Query
@@ -72,7 +71,7 @@ function (angular, _, dateMath) {
                  * we're going to get all metrics at once and then transform them
                  */
                 
-                return this.prtgAPI.getValuesQuery(sensor, channel, useLive).then(function (values) {
+                return this.prtgAPI.getValues(sensor, channel, this.useCache, this.cacheTimeoutMintues).then(function (values) {
                     
                     // Don't perform query for high number of items
                     // to prevent Grafana slowdown

@@ -24,6 +24,10 @@ function (angular, _) {
       this.username         = username;
       this.password         = password;
       this.lastId           = false;
+      this.cachedData       = {};
+      this.cacheTimer       = {};
+      this.cacheHits        = 0;
+      this.cacheMisses      = 0;
 
     };
 
@@ -72,10 +76,7 @@ function (angular, _) {
             }
         });
     };
-
-    p.test = function() {
-      alert("test!");
-    }
+    
     p.performPRTGAPILogin = function() {
     };
 
@@ -103,12 +104,65 @@ function (angular, _) {
         var params = 'content=channels&columns=objid,channel,name&id=' + sensorId;
         return this.performPRTGAPIRequest('table.json', params);
     };
-
-    p.getValuesQuery = function(sensorId, channelIndex, useLive) {
-      if (sensorId !== this.lastId) {
-        this.lastId = sensorId;
-        //code
+    
+    p.getValues = function(sensorId, channelId, useCache, cacheTimeoutMinutes)
+    {
+      if (this.cachedData[sensorId] && useCache) {
+        if ((Date.now() - this.cacheTimer[sensorId]) > (cacheTimeoutMinutes * 60 * 1000)) {
+          return this.getValuesQuery(sensorId, channelId);
+        }
+        this.cacheHits++;
+        return this.getValuesCache(sensorId, channelId);
+      } else {
+          return this.getValuesQuery(sensorId, channelId);
       }
+       
+    }
+
+    /**
+     * PRTGAPI.getValuesCache
+     * Called from the datasource query method (which is in turn called once per each target)
+     * if a key matching the value of sensorId is not present, add results to cache
+     * if results are in the cache, return data from cache.
+     */
+    p.getValuesCache = function(sensorId, channelId, useCache, cacheTimeoutMinutes)
+    {
+      return $q.all(this.getChannel(this.cachedData[sensorId], channelId)).then(function(results) { return results });
+   }
+
+      
+    /**
+     * PRTGAPI.setValuesCache
+     * updates the cache object with results from a query.
+     */
+    p.setValuesCache = function (sensorId, results) {
+        this.cacheTimer[sensorId] = Date.now();
+        this.cachedData[sensorId] = results;
+
+    }
+    
+    /**
+     * PRTGAPI.getChannel
+     * get channel datapoints from a resultset
+     */
+    p.getChannel = function(results, channelId)
+    {
+          var result = [];
+          var rCnt = results.values.item.length;
+          for (var i=0;i<rCnt;i++)
+          {
+           if (results.values.item[i].value_raw && (results.values.item[i].value_raw.length > channelId))
+           {
+               var v = results.values.item[i].value_raw[channelId].text;
+               //Why PRTG, must you use such a oddball date format? 
+               var dt = Math.round((results.values.item[i].datetime_raw - 25569) * 86400,0) * 1000;
+               result.push([v, dt]);
+           }
+          }
+          return result.reverse();
+    }
+    p.getValuesQuery = function(sensorId, channelIndex) {
+   
       if (channelIndex == '!') {
         //getting text info
         var params = "&id=" + sensorId;
@@ -122,27 +176,19 @@ function (angular, _) {
       } else {
         var params = "&content=values&sortby=-datetime&columns=datetime,value_&id=" + sensorId;
         //prtg cannot filter individual channels from a sensor, so we do it here.
-        if (useLive === true) {
-            //the below hack works because providing this argument makes PRTG return the data as if it were making a live graph.
             params = params.concat("&graphid=0"); 
-        }
         
-        
-        return this.performPRTGAPIRequest('table.xml' , params).then(function (results) {
-             var result = [];
-             var rCnt = results.values.item.length;
-             for (var i=0;i<rCnt;i++)
-             {
-              if (results.values.item[i].value_raw && (results.values.item[i].value_raw.length > channelIndex))
-              {
-                  var v = results.values.item[i].value_raw[channelIndex].text;
-                  //Why PRTG, must you use such a oddball date format? 
-                  var dt = Math.round((results.values.item[i].datetime_raw - 25569) * 86400,0) * 1000;
-                  result.push([v, dt]);
-              }
-             }
-             return result.reverse();
+        var self=this;
+        return this.performPRTGAPIRequest('table.xml' , params).then(function(results){
+          self.setValuesCache(sensorId, results);
+          return self.getChannel(results, channelIndex);
+   
         });
+        
+
+        /*.then(function (results) {
+             
+        });*/
       }
     }
     return PRTGAPI;
