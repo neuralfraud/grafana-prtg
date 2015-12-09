@@ -29,10 +29,10 @@ function (angular, _, dateMath) {
             this.url =      datasource.url;
             this.username = datasource.jsonData.prtgApiUser;
             this.password = datasource.jsonData.prtgApiPassword;
-            this.useCache = datasource.jsonData.useCache || true;
+            this.useCache = datasource.jsonData.useCache || false;
             this.cacheTimeoutMintues = datasource.jsonData.cacheTimeoutMinutes || 5;
             this.limitmetrics = datasource.meta.limitmetrics || 100;
-            this.prtgAPI = new PRTGAPI(this.url, this.username, this.password);
+            this.prtgAPI = new PRTGAPI(this.url, this.username, this.password, this.useCache, this.cacheTimeoutMintues);
         }
         /**
          * Data Source Query
@@ -41,12 +41,24 @@ function (angular, _, dateMath) {
          * @return [array]
          */
         PRTGAPIDataSource.prototype.query = function(options) {
+            
+            /** a more efficient approach:
+             * 1) for each sensor in targets, retrieve data
+             * 2) for each target, get values from existing resultset
+             * 3) return combined data
+             *
+             * originally it would simply iterate through each target.
+             * that works fine for API interfaces that allow querying an individual item
+             * which PRTG does not.
+             */
 
             var from = Math.ceil(dateMath.parse(options.range.from) / 1000);
             var to = Math.ceil(dateMath.parse(options.range.to) / 1000);
-            //var useTrendsFrom = Math.ceil(dateMath.parse('now-' + this.trendsFrom) / 1000);
-            //TODO: because prtg returns all channel data for a given sensor, prevent multiple quries to API for multiple channels on the same sensor
+            
+            
+
             var useLive = options.livegraph;
+            //console.log(JSON.stringify(options,null,4));
             var promises = _.map(options.targets, function(target) {
                 if (target.hide || !target.group || !target.device
                                 || !target.channel || !target.sensor) {
@@ -66,12 +78,7 @@ function (angular, _, dateMath) {
                 var sensor = target.sensor.name;
                 var channel = target.channel.name;
                 
-                /**
-                 * ok before we get carried away, the idea here is that we're going to have mutliple sets of groups, devices, sensors, channels etc.
-                 * we're going to get all metrics at once and then transform them
-                 */
-                
-                return this.prtgAPI.getValues(sensor, channel, this.useCache, this.cacheTimeoutMintues).then(function (values) {
+                return this.prtgAPI.getValues(sensor, channel).then(function (values) {
                     
                     // Don't perform query for high number of items
                     // to prevent Grafana slowdown
