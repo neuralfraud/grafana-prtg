@@ -20,8 +20,10 @@ function (angular, _, dateMath) {
     var module = angular.module('grafana.services');
 
     module.factory('PRTGAPIDataSource', function($q, backendSrv, templateSrv, alertSrv, PRTGAPI) {
+        
         /**
          * PRTG Datasource
+         * 
          * @param {object} Grafana Datasource Object
          */
         function PRTGAPIDataSource(datasource) {
@@ -34,31 +36,19 @@ function (angular, _, dateMath) {
             this.limitmetrics = datasource.meta.limitmetrics || 100;
             this.prtgAPI = new PRTGAPI(this.url, this.username, this.password, this.useCache, this.cacheTimeoutMintues);
         }
+        
         /**
          * Data Source Query
          * returns timeseries array of values
+         * 
          * @param {object} options; Dataset Options including targets, etc.
          * @return [array]
          */
         PRTGAPIDataSource.prototype.query = function(options) {
             
-            /** a more efficient approach:
-             * 1) for each sensor in targets, retrieve data
-             * 2) for each target, get values from existing resultset
-             * 3) return combined data
-             *
-             * originally it would simply iterate through each target.
-             * that works fine for API interfaces that allow querying an individual item
-             * which PRTG does not.
-             */
-
             var from = Math.ceil(dateMath.parse(options.range.from) / 1000);
             var to = Math.ceil(dateMath.parse(options.range.to) / 1000);
-            
-            
-
             var useLive = options.livegraph;
-            //console.log(JSON.stringify(options,null,4));
             var promises = _.map(options.targets, function(target) {
                 if (target.hide || !target.group || !target.device
                                 || !target.channel || !target.sensor) {
