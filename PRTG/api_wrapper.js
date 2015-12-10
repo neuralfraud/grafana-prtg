@@ -92,15 +92,23 @@ function (angular, _) {
      */
     p.hashValue = function(e){for(var r=0,i=0;i<e.length;i++)r=(r<<5)-r+e.charCodeAt(i),r&=r;return r};
     
+    /**
+     * pad date parts and optionally add one
+     */
 	p.pad = function(i,a)
 	{
-		if (a) return ("0" + i).slice(-2);
-		return ("0" + (i + 1)).slice(-2);
+		if (a) return ("0" + (i + 1)).slice(-2);
+		return ("0" + i).slice(-2);
 	}
+    
+    /**
+     * convert a UNIX timestamp into a PRTG date string for queries
+     * YYYY-MM-DD-HH-MM-SS
+     */
 	p.getPRTGDate = function(unixtime) 
 	{
 		var d = new Date(unixtime * 1000);
-		var s = [d.getFullYear(), p.pad(d.getMonth()), p.pad(d.getDate(),true), p.pad(d.getHours()), p.pad(d.getMinutes(),true), p.pad(d.getSeconds(),true)];
+		var s = [d.getFullYear(), p.pad(d.getMonth(),true), p.pad(d.getDate()), p.pad(d.getHours()), p.pad(d.getMinutes()), p.pad(d.getSeconds())];
 		//console.log("date string: " + s.join("-"));
 		return s.join("-");
 	
