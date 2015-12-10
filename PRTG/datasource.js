@@ -37,6 +37,34 @@ function (angular, _, dateMath) {
             this.prtgAPI = new PRTGAPI(this.url, this.username, this.password, this.useCache, this.cacheTimeoutMintues);
         }
         
+        PRTGAPIDataSource.prototype.testDatasource = function() {
+            var self = this;
+            return this.prtgAPI.getVersion().then(function (apiVersion) {
+                return self.prtgAPI.performPRTGAPILogin().then(function (auth) {
+                    if (auth) {
+                        return {
+                            status: "success",
+                            title: "Success",
+                            message: "PRTG API version: " + apiVersion
+                            };
+                    } else {
+                        return {
+                            status: "error",
+                            title: "Invalid user name or password",
+                            message: "PRTG API version: " + apiVersion
+                            };
+                    }
+                });
+            }, function(error) {
+                return {
+                    status: "error",
+                    title: "Connection failed",
+                    message: "Could not connect to " + error.config.url
+                };
+            });
+        };
+    
+        
         /**
          * Data Source Query
          * returns timeseries array of values
@@ -68,21 +96,9 @@ function (angular, _, dateMath) {
                 var device = target.device.name;
                 var sensor = target.sensor.name;
                 var channel = target.channel.name;
-                
+                var self = this;
                 return this.prtgAPI.getValues(sensor, channel, from, to).then(function (values) {
-                    
-                    // Don't perform query for high number of items
-                    // to prevent Grafana slowdown
-                    if (values.length > self.limitmetrics) {
-                        var message = "This dataset exceeds the metric limit. Try increasing the limitmetrics parameter in the datasource configuration.<br/>"
-                        + "Current limit is " + self.limitmetrics;
-                        alertSrv.set("Metric limit exceeded", message, "warning", 10000);
-                        return[];
-                    }
-                    else {
-                        //values = _.flatten(values);
-                        var alias = channel === 'All' || sensor.length > 1 ? undefined : target.alias;
-                    }
+                    var alias = channel === 'All' || sensor.length > 1 ? undefined : target.alias;
                     var timeseries = {target:target.channel.visible_name, datapoints: values};
                     return timeseries;
                 });
@@ -90,6 +106,17 @@ function (angular, _, dateMath) {
             
             return $q.all(_.flatten(promises)).then(function (results) {
                 return {data: results};
+            });
+        }
+        
+        PRTGAPIDataSource.prototype.annotationQuery = function(options) {
+            var from = Math.ceil(dateMath.parse(options.range.from) / 1000);
+            var to = Math.ceil(dateMath.parse(options.range.to) / 1000);
+            return this.prtgAPI.getMessages(from, to, options.annotation.sensorId).then(function (messages) {
+                _.each(messages, function (message) {
+                    message.annotation = options.annotation; //inject the annotation into the object
+                });
+                return messages;
             });
         }
         

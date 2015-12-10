@@ -23,6 +23,7 @@ function (angular, _) {
       this.url              = api_url;
       this.username         = username;
       this.password         = password;
+      this.passhash         = null;
       this.lastId           = false;
       this.cache            = {};
 	  this.useCache = 		useCache;
@@ -121,6 +122,20 @@ function (angular, _) {
      * @return promise
      */
     p.performPRTGAPIRequest = function(method, params) {
+      
+      
+      /*
+       *if (this.passhash === null) {
+        return this.performPRTGAPILogin().then(function (result) {
+          if (result !== null) {
+            return result;
+          }
+          console.log("API LOGIN FAILURE. CHECK CREDENTIALS!");
+          return false;
+        });
+      }
+      */
+      
       var queryString = 'username=' + this.username + '&password=' + this.password + '&' + params;
       var options = {
         method: 'GET',
@@ -149,25 +164,57 @@ function (angular, _) {
             return response.data.channels;
           }
           else if (response.data.values) {
-            return response.data;
+            return response.data.values;
           }
           else if (response.data.sensordata) {
             return response.data.sensordata;
+          }
+          else if (response.data.messages) {
+            return response.data.messages;
+          }
+          else if (response.data.Version) { //status request
+            return response.data;
           } else {
-            //All else is XML
-            return new xmlXform(method, response.data)
-            //return JSON.parse(response.data);
+            //All else is XML from table.xml so throw it into the transformer and get JSON back.
+            return new xmlXform(method, response.data);
+            //return JSON.parse(response.data); // unreliable, incorrect JSON returned from API
           }
         }));
       }   
     }
+    
+    p.getVersion = function() {
+      return this.performPRTGAPIRequest('status.json').then(function (response) {
+        if (!response)
+        {
+          return "ERROR. No response.";
+        } else {
+          return response.Version;
+        }
+      });
+    };
     
     /**
      * Authenticate to the PRTG interface
      * not implemented yet (pass username/pass as query string/POST data)
      */
     p.performPRTGAPILogin = function() {
-    };
+        var username = this.username;
+        var password = this.password;
+        var options = {
+          method: 'GET',
+          url: this.url + "/getpasshash.htm?username=" + username + "&password=" + password
+        }
+        var self = this;
+        return backendSrv.datasourceRequest(options).then(function (response) {
+          if (!response)
+          {
+            return false;
+          }
+          self.passhash = response;
+          return true;
+        });
+      };
     
     /**
      * Query API for list of groups
@@ -225,25 +272,19 @@ function (angular, _) {
 		var hours = ((dateTo-dateFrom) / 3600)
 		//console.log("hours: " + hours);
 		var avg = 0;
-//		if (hours < 12) 
-		//{
-			//var method = "table.xml" ;
-			//var params = "&content=values&columns=datetime,value_&id=" + sensorId + "&graphid=0";
-		//} else {
-			if (hours > 12 && hours < 36)
-			{
-				avg = "300";
-			} else if (hours > 36 && hours < 745) {
-				avg = "3600";
-			} else if (hours > 745) {
-				avg = "86400";
-			}
-		
-			var method = "historicdata.xml";
-			var params = "id=" + sensorId + "&sdate=" + this.getPRTGDate(dateFrom) + "&edate=" + this.getPRTGDate(dateTo) + "&avg=" + avg + "&pctshow=false&pctmode=false"
-		//}
+        if (hours > 12 && hours < 36)
+        {
+            avg = "300";
+        } else if (hours > 36 && hours < 745) {
+            avg = "3600";
+        } else if (hours > 745) {
+            avg = "86400";
+        }
+    
+        var method = "historicdata.xml";
+        var params = "id=" + sensorId + "&sdate=" + this.getPRTGDate(dateFrom) + "&edate=" + this.getPRTGDate(dateTo) + "&avg=" + avg + "&pctshow=false&pctmode=false"
+
         if (channelId == '!') {
-			//getting text info (for which I some day hope to add into grafana among many other things (gauges, etc, i mean, WTF not?)
 			var params = "&id=" + sensorId;
 			return this.performPRTGAPIRequest('getsensordetails.json', params).then(function (results) {
 				var message = results.lastmessage;
@@ -277,6 +318,30 @@ function (angular, _) {
 			});
 		}
     }
+    
+    /**
+     * Retrieve messages by sensor
+     */
+    p.getMessages = function(from, to, sensorId) {
+      var method = "table.json";
+      var params = "&content=messages&columns=objid,datetime,parent,type,name,status,message&id=" + sensorId;
+      return this.performPRTGAPIRequest(method, params).then(function(messages) {
+        var events = [];
+        var time = 0;
+          _.each(messages, function(message) {
+            time = Math.round((message.datetime_raw - 25569) * 86400,0);
+            if (time > from && time < to) {
+              events.push({
+              time: time * 1000,
+              title: message.status,
+              text: '<p>' + message.parent + '(' + message.type + ') Message:<br>'+ message.message +'</p>'
+              });
+            }
+          });
+          return events;
+        });
+    }
+    
     return PRTGAPI;
   });
 });

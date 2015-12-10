@@ -5,14 +5,9 @@ define(["angular"],function(a) {
         return {controller:"PRTGQueryCtrl",templateUrl:"app/plugins/datasource/PRTG/partials/query.editor.html"}
     }),
 	b.directive("metricQueryOptionsPrtg", function() {
-		return {templateUrl:"app/plugins/PRTG/partials/query.options.html"}
-	})
-});
-
-/* unused at this time
- * ,b.directive("metricQueryOptionsPRTG",function() {
-        return{templateUrl:"app/plugins/datasource/graphite/partials/query.options.html"}
-    }),b.directive("annotationsQueryEditorGraphite",function() {
-        return{templateUrl:"app/plugins/datasource/graphite/partials/annotations.editor.html"}
+		return {templateUrl:"app/plugins/datasource/PRTG/partials/query.options.html"}
+	}),
+    b.directive("annotationsQueryEditorPrtg", function() {
+        return {templateUrl:"app/plugins/datasource/PRTG/partials/annotations.editor.html"}
     })
-*/
+});
