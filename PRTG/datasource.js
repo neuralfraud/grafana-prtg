@@ -48,6 +48,7 @@ function (angular, _, dateMath) {
             
             var from = Math.ceil(dateMath.parse(options.range.from) / 1000);
             var to = Math.ceil(dateMath.parse(options.range.to) / 1000);
+			
             var useLive = options.livegraph;
             var promises = _.map(options.targets, function(target) {
                 if (target.hide || !target.group || !target.device
@@ -68,7 +69,7 @@ function (angular, _, dateMath) {
                 var sensor = target.sensor.name;
                 var channel = target.channel.name;
                 
-                return this.prtgAPI.getValues(sensor, channel).then(function (values) {
+                return this.prtgAPI.getValues(sensor, channel, from, to).then(function (values) {
                     
                     // Don't perform query for high number of items
                     // to prevent Grafana slowdown

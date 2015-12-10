@@ -25,7 +25,7 @@ xmlXform.xslt = `<?xml version="1.0" encoding="UTF-8" ?>
 <xsl:key name="kvalue_raw" match="value_raw" use="@channelid" />
 
 
- <xsl:template match="values">
+ <xsl:template match="histdata">
     <xsl:copy>
         <xsl:apply-templates select="item"/>
     </xsl:copy>
@@ -147,6 +147,7 @@ xmlXform.xslt2 = `<?xml version="1.0" encoding="UTF-8" ?>
             newxml = xsltProcessor.transformToDocument(xmlXform.xml);
             xsltProcessor.importStylesheet(xmlXform.xslt2);
             json = xsltProcessor.transformToFragment(newxml, document).textContent;
+			//nsole.log("--- JSON ---\n\n" + json);
 //        } else {
 //            xsltProcessor.importStylesheet(xmlXform.xslt2);
 //            json = xsltProcessor.transformToFragment(xmlXform, document).textContent;

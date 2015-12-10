@@ -25,6 +25,8 @@ function (angular, _) {
       this.password         = password;
       this.lastId           = false;
       this.cache            = {};
+	  this.useCache = 		useCache;
+	  this.cacheTimeoutMinutes = cacheTimeoutMinutes;
     };
     
       
@@ -40,14 +42,14 @@ function (angular, _) {
     p.inCache = function(url)
     {
       if ((Date.now() - this.cache[this.hashValue(url)]) > (this.cacheTimeoutMinutes * 60 * 1000)) {
-        console.log("inCache expired for url " + url);
+        //console.log("inCache expired for url " + url);
         return false;
       }
       if (this.useCache && this.cache[this.hashValue(url)]) {
-        console.log("inCache returned TRUE for " + url);
+        //console.log("inCache returned TRUE for " + url);
         return true;
       }
-      console.log("inCache returned FALSE for " + url);
+      //console.log("inCache returned FALSE for " + url + "; useCache: " + this.useCache);
       return false;
     }
     
@@ -60,7 +62,7 @@ function (angular, _) {
     p.getCache = function(url)
     {
       var d = $q.defer();
-      console.log("getCache: retrieving result for url " + url);
+      //console.log("getCache: retrieving result for url " + url);
       d.resolve(this.cache[this.hashValue(url)]);
       return d.promise;
     }
@@ -75,7 +77,7 @@ function (angular, _) {
     p.setCache = function(url, data)
     {
       var d = $q.defer();
-      console.log("setCache: storing result for url " + this.hashValue(url));
+      //console.log("setCache: storing result for url " + this.hashValue(url));
       this.cache[this.hashValue(url)] = data
       d.resolve(this.cache[this.hashValue(url)]);
       return d.promise;
@@ -89,7 +91,20 @@ function (angular, _) {
      * @return int32
      */
     p.hashValue = function(e){for(var r=0,i=0;i<e.length;i++)r=(r<<5)-r+e.charCodeAt(i),r&=r;return r};
-      
+    
+	p.pad = function(i,a)
+	{
+		if (a) return ("0" + i).slice(-2);
+		return ("0" + (i + 1)).slice(-2);
+	}
+	p.getPRTGDate = function(unixtime) 
+	{
+		var d = new Date(unixtime * 1000);
+		var s = [d.getFullYear(), p.pad(d.getMonth()), p.pad(d.getDate(),true), p.pad(d.getHours()), p.pad(d.getMinutes(),true), p.pad(d.getSeconds(),true)];
+		//console.log("date string: " + s.join("-"));
+		return s.join("-");
+	
+	}
     /**
      * Request data from PRTG API
      *
@@ -198,37 +213,61 @@ function (angular, _) {
      * @param  channelId
      * @return array
      */
-    p.getValues = function(sensorId, channelId) {
-      if (channelId == '!') {
-        //getting text info (for which I some day hope to add into grafana among many other things (gauges, etc, i mean, WTF not?)
-        var params = "&id=" + sensorId;
-        return this.performPRTGAPIRequest('getsensordetails.json', params).then(function (results) {
-          var message = results.lastmessage;
-          var timestamp = results.lastcheck.replace(/(\s\[[\d\smsago\]]+)/g,'');
-          //i dont care about repeating this once
-          var dt = Math.round((timestamp - 25569) * 86400,0) * 1000;
-          return [message, dt];
-        });
-      } else {
-        var params = "&content=values&sortby=-datetime&columns=datetime,value_&id=" + sensorId;
-        params = params.concat("&graphid=0"); 
-        
-        return this.performPRTGAPIRequest('table.xml' , params).then(function(results){
-          var result = [];
-          var rCnt = results.values.item.length;
-          for (var i=0;i<rCnt;i++)
-          {
-            if (results.values.item[i].value_raw && (results.values.item[i].value_raw.length > channelId))
-            {
-              var v = results.values.item[i].value_raw[channelId].text;
-              //Why PRTG, must you use such a oddball date format? 
-              var dt = Math.round((results.values.item[i].datetime_raw - 25569) * 86400,0) * 1000;
-              result.push([v, dt]);
-             }
-          }
-          return result.reverse();
-        });
-      }
+    p.getValues = function(sensorId, channelId, dateFrom, dateTo) {
+		var hours = ((dateTo-dateFrom) / 3600)
+		//console.log("hours: " + hours);
+		var avg = 0;
+//		if (hours < 12) 
+		//{
+			//var method = "table.xml" ;
+			//var params = "&content=values&columns=datetime,value_&id=" + sensorId + "&graphid=0";
+		//} else {
+			if (hours > 12 && hours < 36)
+			{
+				avg = "300";
+			} else if (hours > 36 && hours < 745) {
+				avg = "3600";
+			} else if (hours > 745) {
+				avg = "86400";
+			}
+		
+			var method = "historicdata.xml";
+			var params = "id=" + sensorId + "&sdate=" + this.getPRTGDate(dateFrom) + "&edate=" + this.getPRTGDate(dateTo) + "&avg=" + avg + "&pctshow=false&pctmode=false"
+		//}
+        if (channelId == '!') {
+			//getting text info (for which I some day hope to add into grafana among many other things (gauges, etc, i mean, WTF not?)
+			var params = "&id=" + sensorId;
+			return this.performPRTGAPIRequest('getsensordetails.json', params).then(function (results) {
+				var message = results.lastmessage;
+				var timestamp = results.lastcheck.replace(/(\s\[[\d\smsago\]]+)/g,'');
+				//i dont care about repeating this once
+				var dt = Math.round((timestamp - 25569) * 86400,0) * 1000;
+				return [message, dt];
+			});
+		} else {
+			/*var params = "&content=values&sortby=-datetime&columns=datetime,value_&id=" + sensorId;
+			params = params.concat("&graphid=0"); */
+			console.log("get query sensor: " + sensorId + " channel: " + channelId);
+			return this.performPRTGAPIRequest(method, params).then(function(results){
+				var result = [];
+				var rCnt = results.histdata.item.length;
+
+				for (var i=0;i<rCnt;i++)
+				{
+					
+					var dt = Math.round((results.histdata.item[i].datetime_raw - 25569) * 86400,0) * 1000;
+					if (results.histdata.item[i].value_raw && (results.histdata.item[i].value_raw.length > 0))
+					{	
+						var v = Number(results.histdata.item[i].value_raw[channelId].text);
+					} else if (results.histdata.item[i].value_raw) {
+						var v = Number(results.histdata.item[i].value_raw.text);
+					}
+					result.push([v, dt]);
+					
+				}
+				return result;
+			});
+		}
     }
     return PRTGAPI;
   });

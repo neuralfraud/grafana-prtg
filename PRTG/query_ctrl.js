@@ -92,6 +92,17 @@ function (angular, _) {
                 $scope.get_data();
             }
         };
+		
+		$scope.updateChannel = function() {
+            $scope.target.errors = validateTarget($scope.target);
+            if (!_.isEqual($scope.oldTarget, $scope.target) && _.isEmpty($scope.target.errors)) {
+				$scope.target.channel.name = number($scope.oldTarget.channel.name) + $scope.target.channelFilter;
+				console.log ("channelfilter: old channel " + $scope.oldTarget.channel.name + " + " + $scope.target.channelFilter);
+                $scope.oldTarget = angular.copy($scope.target);
+                $scope.get_data();
+            }
+		}
+			
 
         $scope.duplicate = function() {
             var clone = angular.copy($scope.target);
@@ -157,6 +168,7 @@ function (angular, _) {
                 channels.sort(function(a,b)
                 {
                    if (a.objid == -4) return 1;
+				   if (a.objid == -1) return -1;
                    if (a.objid > b.objid) return 1;
                    if (a.objid < b.objid) return -1;
                    return 0;
