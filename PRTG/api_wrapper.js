@@ -245,7 +245,7 @@ function (angular, _) {
      * @return promise - JSON result set
      */
     p.performSensorSuggestQuery = function(deviceId) {
-      var params = 'content=sensors&columns=objid,sensor,device,group&id=' + deviceId;
+      var params = 'content=sensors&columns=objid,sensor,device,group&filter_device=' + deviceId;
       return this.performPRTGAPIRequest('table.json', params);
     };
     
@@ -255,11 +255,62 @@ function (angular, _) {
      *
      * @return promise - JSON result set
      */
-    p.performChannelSuggestQuery = function(sensorId) {
-      var params = 'content=channels&columns=objid,channel,name&id=' + sensorId;
-      return this.performPRTGAPIRequest('table.json', params);
+    p.performChannelSuggestQuery = function(sensorId, device) {
+      var self = this;
+      var arr = [{"device": device}, {"sensor":sensorId}];
+        var p = [];
+        p = _.map(arr, function(a) {
+          if (a.device && typeof a.device == "string") {
+               return self.getDeviceByName(a.device);
+          }
+          
+          if (a.sensor && typeof a.sensor == "string") {
+              return self.getSensorByName(a.sensor,arr[0].device);
+          }
+          
+        });
+        
+        return $q.all(p).then(function(a) {
+          var sensor = a[1][0].objid;
+          var params = 'content=channels&columns=objid,channel,sensor,name&id=' + sensor;
+          return self.performPRTGAPIRequest('table.json', params);
+        });
     };
-      
+    
+    /**
+     *  For Templating: Retrieve device ObjId by it's name.
+     */
+    p.getDeviceByName = function(name)
+    {
+      var self = this;
+      var params = 'content=devices&columns=objid,device&filter_device=' + name;
+      return this.performPRTGAPIRequest('table.json', params);
+    }
+
+    /**
+     *  For Templating: Retrieve Sensor ObjId by it's name and parent device ObjId
+     */
+    p.getSensorByName = function(name, device)
+    {
+      var self = this;
+      var params = 'content=sensors&columns=objid,device,sensor&id=' + device + '&filter_sensor=' + name;
+      return this.performPRTGAPIRequest('table.json', params);
+  
+    }
+    
+    /**
+     * For templating: Retrieve Channel id from its given name.
+     * Sensor ID (number) required.
+     */
+    p.getChannelByName = function(name, sensor) {
+      var self = this;
+      var params = 'content=channels&columns=objid,channel,channelid&id='+ sensor;
+      if (name !== "*") {
+        params = params.concat('&filter_channel=' + name);
+      }
+      return this.performPRTGAPIRequest('table.json', params);
+    }
+    
     /**
      * Query API for data of a given sensorId and then return the
      * matching channel data
@@ -268,55 +319,74 @@ function (angular, _) {
      * @param  channelId
      * @return array
      */
-    p.getValues = function(sensorId, channelId, dateFrom, dateTo) {
-		var hours = ((dateTo-dateFrom) / 3600)
-		//console.log("hours: " + hours);
-		var avg = 0;
-        if (hours > 12 && hours < 36)
-        {
-            avg = "300";
-        } else if (hours > 36 && hours < 745) {
-            avg = "3600";
-        } else if (hours > 745) {
-            avg = "86400";
-        }
+    p.getValues = function(deviceId, sensorId, channelId, dateFrom, dateTo) {
+  
+        var self = this;
+        var arr = [{"device": deviceId}, {"sensor":sensorId}];
+        var p = [];
+        return this.getDeviceByName(deviceId).then(function (deviceObj) {
+          try {
+            var device = deviceObj[0].objid;
+          } catch (e) {
+            return [];
+          }
+          return self.getSensorByName(sensorId, device).then(function(sensorObj) {
+            var sensor = sensorObj[0].objid;
+            var hours = ((dateTo-dateFrom) / 3600)
+            //console.log("hours: " + hours);
+            var avg = 0;
+            if (hours > 12 && hours < 36)
+            {
+                avg = "300";
+            } else if (hours > 36 && hours < 745) {
+                avg = "3600";
+            } else if (hours > 745) {
+                avg = "86400";
+            }
+        
+            var method = "historicdata.xml";
+            var params = "id=" + sensor + "&sdate=" + self.getPRTGDate(dateFrom) + "&edate=" + self.getPRTGDate(dateTo) + "&avg=" + avg + "&pctshow=false&pctmode=false"
     
-        var method = "historicdata.xml";
-        var params = "id=" + sensorId + "&sdate=" + this.getPRTGDate(dateFrom) + "&edate=" + this.getPRTGDate(dateTo) + "&avg=" + avg + "&pctshow=false&pctmode=false"
+            if (channelId == '!') {
+                var params = "&id=" + sensor;
+                return self.performPRTGAPIRequest('getsensordetails.json', params).then(function (results) {
+                    var message = results.lastmessage;
+                    var timestamp = results.lastcheck.replace(/(\s\[[\d\smsago\]]+)/g,'');
+                    //i dont care about repeating this once
+                    var dt = Math.round((timestamp - 25569) * 86400,0) * 1000;
+                    return [message, dt];
+                });
+            } else {
+                /*var params = "&content=values&sortby=-datetime&columns=datetime,value_&id=" + sensorId;
+                params = params.concat("&graphid=0"); */
+                return self.performPRTGAPIRequest(method, params).then(function(results){
+                    var result = [];
+                    var rCnt = results.histdata.item.length;
 
-        if (channelId == '!') {
-			var params = "&id=" + sensorId;
-			return this.performPRTGAPIRequest('getsensordetails.json', params).then(function (results) {
-				var message = results.lastmessage;
-				var timestamp = results.lastcheck.replace(/(\s\[[\d\smsago\]]+)/g,'');
-				//i dont care about repeating this once
-				var dt = Math.round((timestamp - 25569) * 86400,0) * 1000;
-				return [message, dt];
-			});
-		} else {
-			/*var params = "&content=values&sortby=-datetime&columns=datetime,value_&id=" + sensorId;
-			params = params.concat("&graphid=0"); */
-			console.log("get query sensor: " + sensorId + " channel: " + channelId);
-			return this.performPRTGAPIRequest(method, params).then(function(results){
-				var result = [];
-				var rCnt = results.histdata.item.length;
+                    for (var i=0;i<rCnt;i++)
+                    {
+                        
+                        var dt = Math.round((results.histdata.item[i].datetime_raw - 25569) * 86400,0) * 1000;
+                        if (results.histdata.item[i].value_raw && (results.histdata.item[i].value_raw.length > 0))
+                        {
+                            for (var j = 0; j < results.histdata.item[i].value_raw.length; j++) {
+                              //messy but it will have to do for now.. im sure _.filter will be better looking.
+                              if (results.histdata.item[i].value_raw[j].channel == channelId) {
+                                var v = Number(results.histdata.item[i].value_raw[j].text);
+                              }
+                            }
+                        } else if (results.histdata.item[i].value_raw) {
+                            var v = Number(results.histdata.item[i].value_raw.text);
+                        }
+                        result.push([v, dt]);
+                        
+                    }
+                    return result;
+                });
+            }
 
-				for (var i=0;i<rCnt;i++)
-				{
-					
-					var dt = Math.round((results.histdata.item[i].datetime_raw - 25569) * 86400,0) * 1000;
-					if (results.histdata.item[i].value_raw && (results.histdata.item[i].value_raw.length > 0))
-					{	
-						var v = Number(results.histdata.item[i].value_raw[channelId].text);
-					} else if (results.histdata.item[i].value_raw) {
-						var v = Number(results.histdata.item[i].value_raw.text);
-					}
-					result.push([v, dt]);
-					
-				}
-				return result;
-			});
-		}
+          });
+        });
     }
     
     /**
@@ -341,6 +411,8 @@ function (angular, _) {
           return events;
         });
     }
+    
+   
     
     return PRTGAPI;
   });
