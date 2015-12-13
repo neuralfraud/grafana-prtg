@@ -13,6 +13,6 @@ There are probably a lot of issues and WTFs here. It's a work in progress!
 
 I hope this is useful to anyone currently using PRTG.
 
-For more information, see [The Grafana-PRTG Wiki](https://github.com/nerualfraud/grafana-prtg/wiki)
+For more information, see [The Grafana-PRTG Wiki](https://github.com/neuralfraud/grafana-prtg/wiki)
 
 
