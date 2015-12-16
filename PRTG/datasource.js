@@ -3,9 +3,6 @@
  * Datasource Definition
  * 20151206 03:10 Jason Lashua
  * Proof of Concept. Based on publicly available plugins.
- *
- * DOES: Gets data by channel by device. Groups, Devices, Sensors and Channels available.
- * DOES NOT (yet): Trending, Histoic Data, Templating, Annotations
  */
 'use strict';
 define([

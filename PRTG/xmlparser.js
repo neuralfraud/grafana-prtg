@@ -1,5 +1,5 @@
 /**
- * Grafana Datasource Plugin for PRTG API Interface (ALPHA)
+ * Grafana Datasource Plugin for PRTG API Interface
  * XML Transformation and Conversion to JSON
  * 
  * 20151206 03:10 Jason Lashua
@@ -11,8 +11,12 @@
  * value 3 gb/s, channel 2
  * value_raw 30492059, channel 2
  *
- * 1: rearrange XML so we can build arrays of objects.
- * 2: parse transformed XML and convert to JSON
+ * the nodes being unrelated results in repeat objects.
+ *
+ * first xsl sorts nodes by name, such that all <value> elements are
+ * together, and all <value_raw> elements are together.
+ * This results in arrays being created, which we can use.
+ *
  */
 xmlXform = function (method, xmlString) {
     
@@ -133,25 +137,13 @@ xmlXform.xslt2 = `<?xml version="1.0" encoding="UTF-8" ?>
         xmlXform.xslt = parser.parseFromString(xmlXform.xslt, "application/xml");
         xmlXform.xslt2 = parser.parseFromString(xmlXform.xslt2, "application/xml");
     }
-    if (window.ActiveXObject) {
-        xmlXform.xml = new ActiveXObject("Microsoft.XMLDOM");
-        xmlXform.xml.async = false;
-        xmlXform.xml.loadXML(xmlString);
-        json = xmlXform.xml.transformNode(xmlXform.xslt);
-    }
-    else if (document.implementation && document.implementation.createDocument)
-	{
-		var xsltProcessor = new XSLTProcessor();
-//        if (method == "table.xml") {
-            xsltProcessor.importStylesheet(xmlXform.xslt);
-            newxml = xsltProcessor.transformToDocument(xmlXform.xml);
-            xsltProcessor.importStylesheet(xmlXform.xslt2);
-            json = xsltProcessor.transformToFragment(newxml, document).textContent;
-			//nsole.log("--- JSON ---\n\n" + json);
-//        } else {
-//            xsltProcessor.importStylesheet(xmlXform.xslt2);
-//            json = xsltProcessor.transformToFragment(xmlXform, document).textContent;
-//        }
-	}
+    var xsltProcessor = new XSLTProcessor();
+        xsltProcessor.importStylesheet(xmlXform.xslt);
+        newxml = xsltProcessor.transformToDocument(xmlXform.xml);
+    // Using a separate XSLTProcessor instance resolves issue with Firefox.
+    var xsltProcessor2 = new XSLTProcessor();
+        xsltProcessor2.importStylesheet(xmlXform.xslt2);
+        json = xsltProcessor2.transformToFragment(newxml, document).textContent;
+    console.log(json)
     return JSON.parse(json);
 }

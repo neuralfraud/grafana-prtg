@@ -1,11 +1,7 @@
 /**
- * Grafana Datasource Plugin for PRTG API Interface (ALPHA)
+ * Grafana Datasource Plugin for PRTG API Interface (BETA)
  * API Wrapper; Queries and processes data from the PRTG API
- * 20151208 23:10 Jason Lashua
- * Almost Beta.
- *
- * DOES: Gets data by channel by device. Groups, Devices, Sensors and Channels available.
- * DOES NOT (yet): Trending, Histoic Data, Templating, Annotations
+ * 20151215 21:02 Jason Lashua
  */
 define([
   'angular',
@@ -357,8 +353,6 @@ function (angular, _) {
                     return [message, dt];
                 });
             } else {
-                /*var params = "&content=values&sortby=-datetime&columns=datetime,value_&id=" + sensorId;
-                params = params.concat("&graphid=0"); */
                 return self.performPRTGAPIRequest(method, params).then(function(results){
                     var result = [];
                     var rCnt = results.histdata.item.length;
@@ -367,11 +361,13 @@ function (angular, _) {
                     {
                         
                         var dt = Math.round((results.histdata.item[i].datetime_raw - 25569) * 86400,0) * 1000;
+                        console.log(JSON.stringify(results.histdata.item[i],null,4));
                         if (results.histdata.item[i].value_raw && (results.histdata.item[i].value_raw.length > 0))
                         {
                             for (var j = 0; j < results.histdata.item[i].value_raw.length; j++) {
-                              //messy but it will have to do for now.. im sure _.filter will be better looking.
-                              if (results.histdata.item[i].value_raw[j].channel == channelId) {
+                              //workaround for SNMP Bandwidth Issue #3, attempt regex match which will match first part of channel name
+                              //will result in last matching item being used.
+                              if (results.histdata.item[i].value_raw[j].channel.match(channelId) || results.histdata.item[i].value_raw[j].channel == channelId) {
                                 var v = Number(results.histdata.item[i].value_raw[j].text);
                               }
                             }
@@ -411,9 +407,6 @@ function (angular, _) {
           return events;
         });
     }
-    
-   
-    
     return PRTGAPI;
   });
 });
