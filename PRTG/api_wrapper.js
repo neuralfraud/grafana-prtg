@@ -361,7 +361,7 @@ function (angular, _) {
                     {
                         
                         var dt = Math.round((results.histdata.item[i].datetime_raw - 25569) * 86400,0) * 1000;
-                        console.log(JSON.stringify(results.histdata.item[i],null,4));
+                        //console.log(JSON.stringify(results.histdata.item[i],null,4));
                         if (results.histdata.item[i].value_raw && (results.histdata.item[i].value_raw.length > 0))
                         {
                             for (var j = 0; j < results.histdata.item[i].value_raw.length; j++) {
