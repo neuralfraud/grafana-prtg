@@ -1,7 +1,7 @@
 /**
  * Grafana Datasource Plugin for PRTG API Interface (BETA)
  * API Wrapper; Queries and processes data from the PRTG API
- * 20151217 20:48
+ * 20151217 21:53
  */
 define([
   'angular',
@@ -159,7 +159,17 @@ function (angular, _) {
             }
             return new xmlXform(method, response.data);
           }
-        }));
+        }, function (err) {
+		  if (err.data.match(/<error>/g)) {
+			var regex = /<error>(.*)<\/error>/g;
+			var res = regex.exec(err.data);
+			err.message = res[1];
+		  } else {
+			err.message = "Unknown error: " + err.data;
+		  }
+		  d.reject(err);
+		  return d.promise;
+		}))
       }   
     }
     
