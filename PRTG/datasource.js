@@ -36,29 +36,25 @@ function (angular, _, dateMath)
             this.prtgAPI = new PRTGAPI(this.url, this.username, this.password, this.useCache, this.cacheTimeoutMintues);
         }
         
+        /**
+         * Test the datasource
+         */
         PRTGAPIDataSource.prototype.testDatasource = function() {
             var self = this;
             return this.prtgAPI.getVersion().then(function (apiVersion) {
                 return self.prtgAPI.performPRTGAPILogin().then(function (auth) {
-                    if (auth) {
-                        return {
-                            status: "success",
-                            title: "Success",
-                            message: "PRTG API version: " + apiVersion
-                            };
-                    } else {
-                        return {
-                            status: "error",
-                            title: "Invalid user name or password",
-                            message: "PRTG API version: " + apiVersion
-                            };
-                    }
+                    return {
+                        status: "success",
+                        title: "Success",
+                        message: "PRTG API version: " + apiVersion
+                        };
                 });
             }, function(error) {
+                console.log(JSON.stringify(error,null,4));
                 return {
                     status: "error",
-                    title: "Connection failed",
-                    message: "Could not connect to " + error.config.url
+                    title: error.status + ": " + error.statusText,
+                    message: error.config.url
                 };
             });
         };
@@ -80,32 +76,23 @@ function (angular, _, dateMath)
                 if (target.hide || !target.group || !target.device || !target.channel || !target.sensor) {
                     return [];
                 }
-                // normally, we only need sensor ID and channel ID. However, strings are used when templating.
+                
+                //in the first release which didn't have template support, I chose numeric id's. this caused problems for templateSrv.replace.  
                 try {
                     var group = templateSrv.replace(target.group.name);
-                } catch (e) {
-                }
-                
-                try {
                     var device   = templateSrv.replace(target.device.name);
-                } catch (e) {
-                }
-                
-                try {
                     var sensor   = templateSrv.replace(target.sensor.name);
-                } catch (e) {
-                }
-                
-                try {
                     var channel  = templateSrv.replace(target.channel.name);
                 } catch (e) {
+                    var d = $q.defer();
+                    var err = "<p style=\"font-size: 150%; font-weight: bold;\">One or more target's name is not a string!</p><p>All target names should be strings. This should never happen. Your targets were:<br><b>Group:</b> " + target.group.name + "<br><b>Device:</b> " + target.device.name + "<br><b>Sensor:</b> " + target.sensor.name + "<br><b>Channel:</b> " + target.channel.name + "</p>";
+                    d.reject({message: err});
+                    return d.promise;
                 }
-
                 
                 return self.prtgAPI.getValues(device, sensor, channel, from, to).then(function (values) {                
-                //var alias = channel === 'All' || sensor.length > 1 ? undefined : target.alias;
-                var timeseries = {target:target.channel.visible_name, datapoints: values};
-                return timeseries;
+                    var timeseries = {target:target.channel.visible_name, datapoints: values};
+                    return timeseries;
                 });
                 
             
@@ -128,15 +115,19 @@ function (angular, _, dateMath)
                 return messages;
             });
         }
-        
+
+        /* Find Metrics from templated variables
+         *
+         * channel templates are limited to lookup by sensor's numeric ID.
+         *
+         * @param query Query string:
+         * channel:sensor=####
+         * sensor:device=$device or * or numeric ID
+         * device:group=$group or * or numeric ID
+         * group:* or name
+         */
         PRTGAPIDataSource.prototype.metricFindQuery = function(query)
         {
-            /**
-             * sensor:*|(tags|device|group)=query
-             * device:*|(tags|device|group)=query
-             * group:*|(tags|group) = query
-             * channel:sensor=([\d]+)
-             */
             if (!query.match(/(channel|sensor|device|group):(\*)|(tags|sensor|device|group)=([\$\sa-zA-Z0-9-_]+)/i)) {
                 var d = $q.defer();
                 d.reject("Syntax Error: Expected pattern matching /(sensors|devices|groups):(\*)|(tags|device|group)=([a-zA-Z0-9]+)/i")

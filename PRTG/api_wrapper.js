@@ -1,7 +1,7 @@
 /**
  * Grafana Datasource Plugin for PRTG API Interface (BETA)
  * API Wrapper; Queries and processes data from the PRTG API
- * 20151215 21:02 Jason Lashua
+ * 20151217 20:48
  */
 define([
   'angular',
@@ -14,7 +14,6 @@ function (angular, _) {
   var module = angular.module('grafana.services');
 
   module.factory('PRTGAPI', function($q, backendSrv) {
-
     function PRTGAPI(api_url, username, password, useCache, cacheTimeoutMinutes) {
       this.url              = api_url;
       this.username         = username;
@@ -26,7 +25,6 @@ function (angular, _) {
 	  this.cacheTimeoutMinutes = cacheTimeoutMinutes;
     };
     
-      
     var p = PRTGAPI.prototype;
     
     /**
@@ -39,14 +37,11 @@ function (angular, _) {
     p.inCache = function(url)
     {
       if ((Date.now() - this.cache[this.hashValue(url)]) > (this.cacheTimeoutMinutes * 60 * 1000)) {
-        //console.log("inCache expired for url " + url);
         return false;
       }
       if (this.useCache && this.cache[this.hashValue(url)]) {
-        //console.log("inCache returned TRUE for " + url);
         return true;
       }
-      //console.log("inCache returned FALSE for " + url + "; useCache: " + this.useCache);
       return false;
     }
     
@@ -59,7 +54,6 @@ function (angular, _) {
     p.getCache = function(url)
     {
       var d = $q.defer();
-      //console.log("getCache: retrieving result for url " + url);
       d.resolve(this.cache[this.hashValue(url)]);
       return d.promise;
     }
@@ -74,7 +68,6 @@ function (angular, _) {
     p.setCache = function(url, data)
     {
       var d = $q.defer();
-      //console.log("setCache: storing result for url " + this.hashValue(url));
       this.cache[this.hashValue(url)] = data
       d.resolve(this.cache[this.hashValue(url)]);
       return d.promise;
@@ -110,6 +103,7 @@ function (angular, _) {
 		return s.join("-");
 	
 	}
+	
     /**
      * Request data from PRTG API
      *
@@ -118,20 +112,6 @@ function (angular, _) {
      * @return promise
      */
     p.performPRTGAPIRequest = function(method, params) {
-      
-      
-      /*
-       *if (this.passhash === null) {
-        return this.performPRTGAPILogin().then(function (result) {
-          if (result !== null) {
-            return result;
-          }
-          console.log("API LOGIN FAILURE. CHECK CREDENTIALS!");
-          return false;
-        });
-      }
-      */
-      
       var queryString = 'username=' + this.username + '&password=' + this.password + '&' + params;
       var options = {
         method: 'GET',
@@ -144,7 +124,8 @@ function (angular, _) {
       } else {
         return this.setCache(options.url, backendSrv.datasourceRequest(options).then(function (response) {
           if (!response.data) {
-            return[];
+            d.reject({message: "Response contained no data"});
+            return d.promise;
           } 
     
           if (response.data.groups) {
@@ -170,10 +151,13 @@ function (angular, _) {
           }
           else if (response.data.Version) { //status request
             return response.data;
-          } else {
-            //All else is XML from table.xml so throw it into the transformer and get JSON back.
+          } else {  //All else is XML from table.xml so throw it into the transformer and get JSON back.
+            if (response.data == "Not enough monitoring data") {
+			  //Fixes Issue #5 - reject the promise with a message. The message is displayed instead of an uncaught exception.
+              d.reject({message: "<p style=\"font-size: 150%; font-weight: bold\">Not enough monitoring data.</p><p>Request:<br> &quot;" + params + "&quot;</p>"});
+              return d.promise;
+            }
             return new xmlXform(method, response.data);
-            //return JSON.parse(response.data); // unreliable, incorrect JSON returned from API
           }
         }));
       }   
@@ -203,12 +187,8 @@ function (angular, _) {
         }
         var self = this;
         return backendSrv.datasourceRequest(options).then(function (response) {
-          if (!response)
-          {
-            return false;
-          }
           self.passhash = response;
-          return true;
+          return response;
         });
       };
     
@@ -310,16 +290,15 @@ function (angular, _) {
     /**
      * Query API for data of a given sensorId and then return the
      * matching channel data
-     *
-     * @param  sensorId
-     * @param  channelId
+     * @param deviceId Name of Device
+     * @param  sensorId Name of Sensor
+     * @param  channelId Name of Channel
+     * @param dateFrom  Earliest time in range
+     * @param dateTo Latest time in range
      * @return array
      */
     p.getValues = function(deviceId, sensorId, channelId, dateFrom, dateTo) {
-  
         var self = this;
-        var arr = [{"device": deviceId}, {"sensor":sensorId}];
-        var p = [];
         return this.getDeviceByName(deviceId).then(function (deviceObj) {
           try {
             var device = deviceObj[0].objid;
@@ -329,10 +308,8 @@ function (angular, _) {
           return self.getSensorByName(sensorId, device).then(function(sensorObj) {
             var sensor = sensorObj[0].objid;
             var hours = ((dateTo-dateFrom) / 3600)
-            //console.log("hours: " + hours);
             var avg = 0;
-            if (hours > 12 && hours < 36)
-            {
+            if (hours > 12 && hours < 36) {
                 avg = "300";
             } else if (hours > 36 && hours < 745) {
                 avg = "3600";
@@ -348,26 +325,26 @@ function (angular, _) {
                 return self.performPRTGAPIRequest('getsensordetails.json', params).then(function (results) {
                     var message = results.lastmessage;
                     var timestamp = results.lastcheck.replace(/(\s\[[\d\smsago\]]+)/g,'');
-                    //i dont care about repeating this once
                     var dt = Math.round((timestamp - 25569) * 86400,0) * 1000;
                     return [message, dt];
                 });
             } else {
-                return self.performPRTGAPIRequest(method, params).then(function(results){
+                return self.performPRTGAPIRequest(method, params).then(function(results) {
                     var result = [];
+                    if (!results.histdata) {
+                        return results;
+                    }
                     var rCnt = results.histdata.item.length;
 
                     for (var i=0;i<rCnt;i++)
                     {
                         
                         var dt = Math.round((results.histdata.item[i].datetime_raw - 25569) * 86400,0) * 1000;
-                        //console.log(JSON.stringify(results.histdata.item[i],null,4));
                         if (results.histdata.item[i].value_raw && (results.histdata.item[i].value_raw.length > 0))
                         {
                             for (var j = 0; j < results.histdata.item[i].value_raw.length; j++) {
-                              //workaround for SNMP Bandwidth Issue #3, attempt regex match which will match first part of channel name
-                              //will result in last matching item being used.
-                              if (results.histdata.item[i].value_raw[j].channel.match(channelId) || results.histdata.item[i].value_raw[j].channel == channelId) {
+                              //workaround for SNMP Bandwidth Issue #3. Check for presence of (speed) suffix, and use that.
+                              if (results.histdata.item[i].value_raw[j].channel.match(channelId + " (speed)") || results.histdata.item[i].value_raw[j].channel == channelId) {
                                 var v = Number(results.histdata.item[i].value_raw[j].text);
                               }
                             }
@@ -375,18 +352,20 @@ function (angular, _) {
                             var v = Number(results.histdata.item[i].value_raw.text);
                         }
                         result.push([v, dt]);
-                        
                     }
                     return result;
                 });
             }
-
           });
         });
     }
     
     /**
-     * Retrieve messages by sensor
+     * Retrieve messages for a given sensor.
+     * 
+     * @param from Earliest time in range
+     * @param to Latest time in range
+     * @sensorId Numeric ID of Sensor 
      */
     p.getMessages = function(from, to, sensorId) {
       var method = "table.json";

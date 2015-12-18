@@ -138,12 +138,11 @@ xmlXform.xslt2 = `<?xml version="1.0" encoding="UTF-8" ?>
         xmlXform.xslt2 = parser.parseFromString(xmlXform.xslt2, "application/xml");
     }
     var xsltProcessor = new XSLTProcessor();
-	xsltProcessor.importStylesheet(xmlXform.xslt);
-	newxml = xsltProcessor.transformToDocument(xmlXform.xml);
+        xsltProcessor.importStylesheet(xmlXform.xslt);
+        newxml = xsltProcessor.transformToDocument(xmlXform.xml);
     // Using a separate XSLTProcessor instance resolves issue with Firefox.
     var xsltProcessor2 = new XSLTProcessor();
-	xsltProcessor2.importStylesheet(xmlXform.xslt2);
-	json = xsltProcessor2.transformToFragment(newxml, document).textContent;
-    //console.log(json)
+        xsltProcessor2.importStylesheet(xmlXform.xslt2);
+        json = xsltProcessor2.transformToFragment(newxml, document).textContent;
     return JSON.parse(json);
 }
