@@ -1,0 +1,44 @@
+<datasource-http-settings current="ctrl.current">
+</datasource-http-settings>
+
+
+<br>
+
+<h5>PRTG API Configuration</h5>
+<p>We recommend that you create a special-privilege account for remote API use.</p>
+<div class="tight-form">
+  <ul class="tight-form-list">
+    <li class="tight-form-item" style="width: 80px">
+      User
+    </li>
+    <li>
+      <input type="text" class="tight-form-input input-large" ng-model='ctrl.current.jsonData.prtgApiUser' placeholder=""></input>
+    </li>
+    <li class="tight-form-item">
+      Password
+    </li>
+    <li>
+      <input type="password" class="tight-form-input input-large" ng-model='ctrl.current.jsonData.prtgApiPassword' placeholder=""></input>
+    </li>
+  </ul>
+  <div class="clearfix"></div>
+  <h5>Cache Options</h5>
+  <p>When enabled, results are cached. This improves performance for graphs that have multiple metrics from the same sensor..</p>
+  <p>Timeout should not be greater than 5 minutes.</p>
+<div class="tight-form">
+  <ul class="tight-form-list">
+    <li class="tight-form-item" style="width: 80px">
+      Use Cache
+    </li>
+    <li>
+      <input type="checkbox" class="tight-form-input input-large" ng-model='ctrl.current.jsonData.useCache' placeholder=""></input>
+    </li>
+    <li class="tight-form-item">
+      Cache Timeout
+    </li>
+    <li>
+      <input type="text" class="tight-form-input input-large" ng-model='ctrl.current.jsonData.cacheTimeoutMinutes' placeholder="Minutes"></input>
+    </li>
+  </ul>
+  <div class="clearfix"></div>  
+</div>

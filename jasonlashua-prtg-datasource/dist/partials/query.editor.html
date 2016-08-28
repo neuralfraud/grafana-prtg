@@ -10,14 +10,14 @@
 							<i class="fa fa-bars"></i>
 						</a>
 						<ul class="dropdown-menu pull-right" role="menu">
-							<li role="menuitem"><a tabindex="1" ng-click="duplicate()">Duplicate</a></li>
-							<li role="menuitem"><a tabindex="1" ng-click="moveMetricQuery($index, $index-1)">Move up</a></li>
-							<li role="menuitem"><a tabindex="1" ng-click="moveMetricQuery($index, $index+1)">Move down</a></li>
+							<li role="menuitem"><a tabindex="1" ng-click="ctrl.duplicate()">Duplicate</a></li>
+							<li role="menuitem"><a tabindex="1" ng-click="ctrl.moveMetricQuery($index, $index-1)">Move up</a></li>
+							<li role="menuitem"><a tabindex="1" ng-click="ctrl.moveMetricQuery($index, $index+1)">Move down</a></li>
 						</ul>
 					</div>
 				</li>
 				<li class="tight-form-item last">
-					<a class="pointer" tabindex="1" ng-click="removeDataQuery(target)">
+					<a class="pointer" tabindex="1" ng-click="ctrl.removeQuery(target)">
 						<i class="fa fa-remove"></i>
 					</a>
 				</li>
@@ -29,7 +29,7 @@
 				</li>
 				<li>
 					<a  class="tight-form-item"
-						ng-click="target.hide = !target.hide; get_data();"
+						ng-click="ctrl.target.hide = !target.hide; get_data();"
 						role="menuitem">
 						<i class="fa fa-eye"></i>
 					</a>
@@ -41,22 +41,22 @@
 				<li>
 				<input type="text"
 					 class="tight-form-input input-medium"
-					 ng-model="target.alias"
+					 ng-model="ctrl.target.alias"
 					 spellcheck='false'
 					 placeholder="Alias"
-					 ng-blur="targetBlur()">
+					 ng-blur="ctrl.targetBlur()">
 				</li>
 				<!-- Select Probe / Group -->
 				<li class="tight-form-item input-small" style="width: 5em">Group</li>
 				<li>
 					<select class="tight-form-input input-large"
-					  ng-change="selectGroup()"
-					  ng-model="target.group"
-					  bs-tooltip="target.group.name.length > 25 ? target.group.name : ''"
-					  ng-options="group.visible_name ? group.visible_name : group.name for group in metric.groupList track by group.name" >
+					  ng-change="ctrl.selectGroup()"
+					  ng-model="ctrl.target.group"
+					  bs-tooltip="ctrl.target.group.name.length > 25 ? target.group.name : ''"
+					  ng-options="group.visible_name ? group.visible_name : group.name for group in ctrl.metric.groupList track by group.name" >
 						<option value="">-- Select Group --</option>
 					</select>
-					<a bs-tooltip="target.errors.metric"
+					<a bs-tooltip="ctrl.target.errors.metric"
 						style="color: rgb(229, 189, 28)"
 						ng-show="target.errors.metric">
 						<i class="fa fa-warning"></i>
@@ -66,10 +66,10 @@
 				<li class="tight-form-item input-small" style="width: 5em">Device</li>
 					<li>
 						<select class="tight-form-input input-large"
-						ng-change="selectDevice()"
-						ng-model="target.device"
-						bs-tooltip="target.device.name.length > 25 ? target.device.name : ''"
-						ng-options="device.visible_name ? device.visible_name : device.name for device in metric.deviceList track by device.name" >
+						ng-change="ctrl.selectDevice()"
+						ng-model="ctrl.target.device"
+						bs-tooltip="ctrl.target.device.name.length > 25 ? ctrl.target.device.name : ''"
+						ng-options="device.visible_name ? device.visible_name : device.name for device in ctrl.metric.deviceList track by device.name" >
 							<option value="">-- Select Device --</option>
 						</select>
 						<a bs-tooltip="target.errors.metric"
@@ -95,15 +95,15 @@
 				<li class="tight-form-item input-small" style="width: 5em">Sensor</li>
 				<li>
 				<select class="tight-form-input input-large"
-						ng-change="selectSensor()"
-						ng-model="target.sensor"
-						bs-tooltip="target.sensor.visible_name.length > 15 ? target.sensor.visible_name : ''"
-						ng-options="sensor.visible_name ? sensor.visible_name : sensor.name for sensor in metric.sensorList track by sensor.name" >
+						ng-change="ctrl.selectSensor()"
+						ng-model="ctrl.target.sensor"
+						bs-tooltip="ctrl.target.sensor.visible_name.length > 15 ? ctrl.target.sensor.visible_name : ''"
+						ng-options="sensor.visible_name ? sensor.visible_name : sensor.name for sensor in ctrl.metric.sensorList track by sensor.name" >
 					<option value="">-- Select Sensor --</option>
 				</select>
-				<a bs-tooltip="target.errors.metric"
+				<a bs-tooltip="ctrl.target.errors.metric"
 				   style="color: rgb(229, 189, 28)"
-				   ng-show="target.errors.metric">
+				   ng-show="ctrl.target.errors.metric">
 					<i class="icon-warning-sign"></i>
 				</a>
 			</li>
@@ -111,15 +111,15 @@
 			<li class="tight-form-item input-small" style="width: 5em">Channel</li>
 			<li>
 				<select class="tight-form-input input-large"
-						ng-change="selectChannel()"
-						ng-model="target.channel"
-						bs-tooltip="target.channel.visible_name.length > 25 ? target.channel.name : ''"
-						ng-options="channel.visible_name ? channel.visible_name : channel.name for channel in metric.channelList track by channel.name" >
+						ng-change="ctrl.selectChannel()"
+						ng-model="ctrl.target.channel"
+						bs-tooltip="ctrl.target.channel.visible_name.length > 25 ? ctrl.target.channel.name : ''"
+						ng-options="channel.visible_name ? channel.visible_name : channel.name for channel in ctrl.metric.channelList track by channel.name" >
 					<option value="">-- Select Channel --</option>
 				</select>
-				<a bs-tooltip="target.errors.metric"
+				<a bs-tooltip="ctrl.target.errors.metric"
 				   style="color: rgb(229, 189, 28)"
-				   ng-show="target.errors.metric">
+				   ng-show="ctrl.target.errors.metric">
 					<i class="icon-warning-sign"></i>
 				</a>
 			</li>
@@ -145,10 +145,10 @@
 			<li>
 			  <input type="text"
 					 class="tight-form-input input-small"
-					 ng-model="target.scale"
+					 ng-model="ctrl.target.scale"
 					 spellcheck='false'
 					 placeholder="1"
-					 ng-blur="targetBlur()">
+					 ng-blur="ctrl.targetBlur()">
 			</li>
 		</ul>
 		<div class="clearfix"></div>
