@@ -17,18 +17,16 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
      */
 
     /** @ngInject */
-    function PRTGAPIService($q, alertSrv, backendSrv) {
+    function PRTGAPIService(alertSrv, backendSrv) {
         var PRTGAPI = function () {
-            function PRTGAPI(api_url, username, password, useCache, cacheTimeoutMinutes) {
+            function PRTGAPI(api_url, username, passhash, cacheTimeoutMinutes) {
                 _classCallCheck(this, PRTGAPI);
 
                 this.url = api_url;
                 this.username = username;
-                this.password = password;
-                this.passhash = null;
+                this.passhash = passhash;
                 this.lastId = false;
                 this.cache = {};
-                this.useCache = useCache;
                 this.cacheTimeoutMinutes = cacheTimeoutMinutes;
                 this.alertSrv = alertSrv;
                 this.backendSrv = backendSrv;
@@ -46,7 +44,7 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
                     if (Date.now() - this.cache[this.hashValue(url)] > this.cacheTimeoutMinutes * 60 * 1000) {
                         return false;
                     }
-                    if (this.useCache && this.cache[this.hashValue(url)]) {
+                    if (this.cache[this.hashValue(url)]) {
                         return true;
                     }
                     return false;
@@ -54,24 +52,25 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
             }, {
                 key: 'getCache',
                 value: function getCache(url) {
-                    var d = $q.defer();
-                    d.resolve(this.cache[this.hashValue(url)]);
-                    return d.promise;
+                    return Promise.resolve(this.cache[this.hashValue(url)]);
                 }
             }, {
                 key: 'setCache',
                 value: function setCache(url, data) {
-                    var d = $q.defer();
                     this.cache[this.hashValue(url)] = data;
-                    d.resolve(this.cache[this.hashValue(url)]);
-                    return d.promise;
+                    return this.getCache(url);
                 }
             }, {
                 key: 'hashValue',
-                value: function hashValue(e) {
-                    for (var r = 0, i = 0; i < e.length; i++) {
-                        r = (r << 5) - r + e.charCodeAt(i), r &= r;
-                    }return r;
+                value: function hashValue(str) {
+                    var hash = 0;
+                    if (str.length === 0) return hash;
+                    for (var i = 0; i < str.length; i++) {
+                        var char = str.charCodeAt(i);
+                        hash = (hash << 5) - hash + char;
+                        hash = hash & hash; // Convert to 32bit integer
+                    }
+                    return hash;
                 }
             }, {
                 key: 'pad',
@@ -90,20 +89,18 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
             }, {
                 key: 'performPRTGAPIRequest',
                 value: function performPRTGAPIRequest(method, params) {
-                    var queryString = 'username=' + this.username + '&password=' + this.password + '&' + params;
+                    var queryString = 'username=' + this.username + '&passhash=' + this.passhash + '&' + params;
                     var options = {
                         method: 'GET',
                         url: this.url + '/' + method + '?' + queryString
                     };
 
-                    var d = $q.defer(); //required to keep execution within the originating promise's context
                     if (this.inCache(options.url)) {
                         return this.getCache(options.url);
                     } else {
                         return this.setCache(options.url, this.backendSrv.datasourceRequest(options).then(function (response) {
                             if (!response.data) {
-                                d.reject({ message: "Response contained no data" });
-                                return d.promise;
+                                return Promise.reject({ message: "Response contained no data" });
                             }
 
                             if (response.data.groups) {
@@ -127,8 +124,7 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
                                 //All else is XML from table.xml so throw it into the transformer and get JSON back.
                                 if (response.data == "Not enough monitoring data") {
                                     //Fixes Issue #5 - reject the promise with a message. The message is displayed instead of an uncaught exception.
-                                    d.reject({ message: "<p style=\"font-size: 150%; font-weight: bold\">Not enough monitoring data.</p><p>Request:<br> &quot;" + params + "&quot;</p>" });
-                                    return d.promise;
+                                    return Promise.reject({ message: "<p style=\"font-size: 150%; font-weight: bold\">Not enough monitoring data.</p><p>Request:<br> &quot;" + params + "&quot;</p>" });
                                 }
                                 return new XMLXform(method, response.data);
                             }
@@ -140,8 +136,7 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
                             } else {
                                 err.message = "Unknown error: " + err.data;
                             }
-                            d.reject(err);
-                            return d.promise;
+                            return Promise.reject(err);
                         }));
                     }
                 }
@@ -159,15 +154,16 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
             }, {
                 key: 'performPRTGAPILogin',
                 value: function performPRTGAPILogin() {
+                    var _this = this;
+
                     var username = this.username;
-                    var password = this.password;
+                    var passhash = this.passhash;
                     var options = {
                         method: 'GET',
-                        url: this.url + "/getpasshash.htm?username=" + username + "&password=" + password
+                        url: this.url + "/getstatus.htm?id=0&username=" + username + "&passhash=" + passhash
                     };
-                    var self = this; //fix for es6? 
                     return this.backendSrv.datasourceRequest(options).then(function (response) {
-                        self.passhash = response;
+                        _this.passhash = response;
                         return response;
                     });
                 }
@@ -195,23 +191,24 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
             }, {
                 key: 'performChannelSuggestQuery',
                 value: function performChannelSuggestQuery(sensorId, device) {
-                    var self = this;
+                    var _this2 = this;
+
                     var arr = [{ "device": device }, { "sensor": sensorId }];
                     var p = [];
                     p = _.map(arr, function (a) {
                         if (a.device && typeof a.device == "string") {
-                            return self.getDeviceByName(a.device);
+                            return _this2.getDeviceByName(a.device);
                         }
 
                         if (a.sensor && typeof a.sensor == "string") {
-                            return self.getSensorByName(a.sensor, arr[0].device);
+                            return _this2.getSensorByName(a.sensor, arr[0].device);
                         }
                     });
 
-                    return $q.all(p).then(function (a) {
+                    return Promise.all(p).then(function (a) {
                         var sensor = a[1][0].objid;
                         var params = 'content=channels&columns=objid,channel,sensor,name&id=' + sensor;
-                        return self.performPRTGAPIRequest('table.json', params);
+                        return _this2.performPRTGAPIRequest('table.json', params);
                     });
                 }
             }, {
@@ -238,14 +235,16 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
             }, {
                 key: 'getValues',
                 value: function getValues(deviceId, sensorId, channelId, dateFrom, dateTo) {
-                    var self = this;
+                    var _this3 = this;
+
                     return this.getDeviceByName(deviceId).then(function (deviceObj) {
+                        var device;
                         try {
-                            var device = deviceObj[0].objid;
+                            device = deviceObj[0].objid;
                         } catch (e) {
                             return [];
                         }
-                        return self.getSensorByName(sensorId, device).then(function (sensorObj) {
+                        return _this3.getSensorByName(sensorId, device).then(function (sensorObj) {
                             var sensor = sensorObj[0].objid;
                             var hours = (dateTo - dateFrom) / 3600;
                             var avg = 0;
@@ -258,18 +257,18 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
                             }
 
                             var method = "historicdata.xml";
-                            var params = "id=" + sensor + "&sdate=" + self.getPRTGDate(dateFrom) + "&edate=" + self.getPRTGDate(dateTo) + "&avg=" + avg + "&pctshow=false&pctmode=false";
+                            var params = "id=" + sensor + "&sdate=" + _this3.getPRTGDate(dateFrom) + "&edate=" + _this3.getPRTGDate(dateTo) + "&avg=" + avg + "&pctshow=false&pctmode=false";
 
                             if (channelId == '!') {
-                                var params = "&id=" + sensor;
-                                return self.performPRTGAPIRequest('getsensordetails.json', params).then(function (results) {
+                                params = "&id=" + sensor;
+                                return _this3.performPRTGAPIRequest('getsensordetails.json', params).then(function (results) {
                                     var message = results.lastmessage;
                                     var timestamp = results.lastcheck.replace(/(\s\[[\d\smsago\]]+)/g, '');
                                     var dt = Math.round((timestamp - 25569) * 86400, 0) * 1000;
                                     return [message, dt];
                                 });
                             } else {
-                                return self.performPRTGAPIRequest(method, params).then(function (results) {
+                                return _this3.performPRTGAPIRequest(method, params).then(function (results) {
                                     var result = [];
                                     if (!results.histdata) {
                                         return results;
@@ -277,17 +276,19 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
                                     var rCnt = results.histdata.item.length;
 
                                     for (var i = 0; i < rCnt; i++) {
-
+                                        var v;
                                         var dt = Math.round((results.histdata.item[i].datetime_raw - 25569) * 86400, 0) * 1000;
                                         if (results.histdata.item[i].value_raw && results.histdata.item[i].value_raw.length > 0) {
+                                            //FIXME: better way of dealing with multiple channels of same name
+                                            //IE you select "Traffic In" but PRTG provides Volume AND Speed channels.
                                             for (var j = 0; j < results.histdata.item[i].value_raw.length; j++) {
                                                 //workaround for SNMP Bandwidth Issue #3. Check for presence of (speed) suffix, and use that.
-                                                if (results.histdata.item[i].value_raw[j].channel.match(channelId + " (speed)") || results.histdata.item[i].value_raw[j].channel == channelId) {
-                                                    var v = Number(results.histdata.item[i].value_raw[j].text);
+                                                if (results.histdata.item[i].value_raw[j].channel.match(channelId + ' [(]speed[)]') || results.histdata.item[i].value_raw[j].channel == channelId) {
+                                                    v = Number(results.histdata.item[i].value_raw[j].text);
                                                 }
                                             }
                                         } else if (results.histdata.item[i].value_raw) {
-                                            var v = Number(results.histdata.item[i].value_raw.text);
+                                            v = Number(results.histdata.item[i].value_raw.text);
                                         }
                                         result.push([v, dt]);
                                     }

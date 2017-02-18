@@ -35,6 +35,10 @@ System.register(['app/plugins/sdk', 'lodash'], function (_export, _context) {
     if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
   }
 
+  // I stole this from grafana-zabbix, err, I mean, I was inspired by grafana-zabbix ;) 
+  function getMetricNames(scope, metricList) {
+    return _.uniq(_.map(scope.metric[metricList], 'name'));
+  }
   return {
     setters: [function (_appPluginsSdk) {
       QueryCtrl = _appPluginsSdk.QueryCtrl;
@@ -63,7 +67,6 @@ System.register(['app/plugins/sdk', 'lodash'], function (_export, _context) {
       _export('PRTGQueryController', PRTGQueryController = function (_QueryCtrl) {
         _inherits(PRTGQueryController, _QueryCtrl);
 
-        // ZabbixQueryCtrl constructor
         function PRTGQueryController($scope, $injector, $sce, $q, templateSrv) {
           _classCallCheck(this, PRTGQueryController);
 
@@ -79,43 +82,39 @@ System.register(['app/plugins/sdk', 'lodash'], function (_export, _context) {
             };
             _.defaults(this, scopeDefaults);
 
-            this.metric = {
-              groupList: ["Loading..."],
-              deviceList: ["Loading..."],
-              sensorList: ["Loading..."],
-              channelList: ["Loading..."]
-            };
-
-            //update the picklists
             this.updateGroupList();
             this.updateDeviceList();
             this.updateSensorList();
             this.updateChannelList();
-            this.setChannelAlias();
+
             this.target.errors = this.validateTarget(target);
+
+            //the zabbix-grafana guys are way more smarter than i am, brilliant idea.      
+            this.getGroupNames = _.partial(getMetricNames, this, 'groupList');
+            this.getDeviceNames = _.partial(getMetricNames, this, 'deviceList');
+            this.getSensorNames = _.partial(getMetricNames, this, 'sensorList');
+            this.getChannelNames = _.partial(getMetricNames, this, 'channelList');
           };
           _this.init();
           return _this;
         }
+
         /**
-        * Take alias from channel name by default
+        * Alias is comprised of the device name, sensor and channel, e.g., FILESERV1: DNS Response Time.
         */
 
 
         _createClass(PRTGQueryController, [{
-          key: 'setChannelAlias',
-          value: function setChannelAlias() {
-            if (!this.target.alias && this.target.channel) {
-              this.target.alias = this.target.channel.name;
-            }
+          key: 'setTargetAlias',
+          value: function setTargetAlias() {
+            this.target.alias = this.target.device.name + ": " + this.target.sensor.name + " " + this.target.channel.name;
           }
         }, {
-          key: 'targetBlur',
-          value: function targetBlur() {
-            this.setChannelAlias();
-            this.target.errors = validateTarget(this.target);
-            if (!_.isEqual(this.oldTarget, this.target) && _.isEmpty(this.target.errors)) {
-              this.oldTarget = angular.copy(this.target);
+          key: 'targetChange',
+          value: function targetChange() {
+            var newTarget = _.cloneDeep(this.target);
+            if (!_.isEqual(this.oldTarget, this.target)) {
+              this.oldTarget = newTarget;
               this.panelCtrl.refresh();
             }
           }
@@ -123,130 +122,90 @@ System.register(['app/plugins/sdk', 'lodash'], function (_export, _context) {
           key: 'selectGroup',
           value: function selectGroup() {
             this.updateDeviceList();
-            this.target.errors = this.validateTarget(this.target);
-            if (!_.isEqual(this.oldTarget, this.target) && _.isEmpty(this.target.errors)) {
-              this.oldTarget = angular.copy(this.target);
-              this.panelCtrl.refresh();
-            }
+            this.targetChange();
           }
         }, {
           key: 'selectDevice',
           value: function selectDevice() {
             this.updateSensorList();
-
-            this.target.errors = this.validateTarget(this.target);
-            if (!_.isEqual(this.oldTarget, this.target) && _.isEmpty(this.target.errors)) {
-              this.oldTarget = angular.copy(this.target);
-              this.panelCtrl.refresh();
-            }
+            this.targetChange();
           }
         }, {
           key: 'selectSensor',
           value: function selectSensor() {
             this.updateChannelList();
-            this.setChannelAlias();
-            this.target.errors = this.validateTarget(this.target);
-            if (!_.isEqual(this.oldTarget, this.target) && _.isEmpty(this.target.errors)) {
-              this.oldTarget = angular.copy(this.target);
-              this.panelCtrl.refresh();
-            }
+            this.targetChange();
           }
         }, {
           key: 'selectChannel',
           value: function selectChannel() {
-            this.target.errors = this.validateTarget(this.target);
-            if (!_.isEqual(this.oldTarget, this.target) && _.isEmpty(this.target.errors)) {
-              this.oldTarget = angular.copy(this.target);
-              this.panelCtrl.refresh();
-            }
-          }
-        }, {
-          key: 'updateChannel',
-          value: function updateChannel() {
-            this.target.errors = this.validateTarget(this.target);
-            if (!_.isEqual(this.oldTarget, this.target) && _.isEmpty(this.target.errors)) {
-              this.target.channel.name = number(this.oldTarget.channel.name) + this.target.channelFilter;
-              this.oldTarget = angular.copy(this.target);
-              this.panelCtrl.refresh();
-            }
-          }
-        }, {
-          key: 'duplicate',
-          value: function duplicate() {
-            var clone = angular.copy(this.target);
-            this.panel.targets.push(clone);
-          }
-        }, {
-          key: 'moveMetricQuery',
-          value: function moveMetricQuery(fromIndex, toIndex) {
-            _.move(this.panel.targets, fromIndex, toIndex);
+            this.setTargetAlias();
+            this.targetChange();
           }
         }, {
           key: 'updateGroupList',
           value: function updateGroupList() {
-            var self = this;
-            self.metric.groupList = [{ name: '*', visible_name: 'All' }];
-            this.addTemplatedVariables(self.metric.groupList);
+            var _this2 = this;
+
+            this.metric.groupList = [{ name: '*', visible_name: 'All' }];
+            this.addTemplatedVariables(this.metric.groupList);
             this.datasource.prtgAPI.performGroupSuggestQuery().then(function (groups) {
               _.map(groups, function (group) {
-                self.metric.groupList.push({ name: group.group, visible_name: group.group });
+                _this2.metric.groupList.push({ name: group.group, visible_name: group.group });
               });
             });
           }
         }, {
           key: 'updateDeviceList',
           value: function updateDeviceList() {
-            var self = this;
-            var groups;
-            self.metric.deviceList = [{ name: '*', visible_name: 'All' }];
-            this.addTemplatedVariables(self.metric.deviceList);
+            var _this3 = this;
+
+            var group;
+            this.metric.deviceList = [{ name: '*', visible_name: 'All' }];
+            this.addTemplatedVariables(this.metric.deviceList);
             if (this.target.group) {
-              groups = this.target.group.name || undefined;
+              group = this.target.group.name || undefined;
+              group = this.templateSrv.replace(group);
             }
-            if (typeof groups == "string") {
-              groups = this.templateSrv.replace(groups);
-            }
-            this.datasource.prtgAPI.performDeviceSuggestQuery(groups).then(function (devices) {
+            this.datasource.prtgAPI.performDeviceSuggestQuery(group).then(function (devices) {
               _.map(devices, function (device) {
-                self.metric.deviceList.push({ name: device.device, visible_name: device.device });
+                _this3.metric.deviceList.push({ name: device.device, visible_name: device.device });
               });
             });
           }
         }, {
           key: 'updateSensorList',
           value: function updateSensorList() {
-            var self = this;
+            var _this4 = this;
+
             var device;
-            self.metric.sensorList = [{ name: '*', visible_name: 'All' }];
-            this.addTemplatedVariables(self.metric.sensorList);
+            this.metric.sensorList = [{ name: '*', visible_name: 'All' }];
+            this.addTemplatedVariables(this.metric.sensorList);
             if (this.target.device) {
               device = this.target.device.name || undefined;
-            }
-            if (typeof device == "string") {
               device = this.templateSrv.replace(device);
             }
             this.datasource.prtgAPI.performSensorSuggestQuery(device).then(function (sensors) {
               _.map(sensors, function (sensor) {
-                self.metric.sensorList.push({ name: sensor.sensor, visible_name: sensor.sensor });
+                _this4.metric.sensorList.push({ name: sensor.sensor, visible_name: sensor.sensor });
               });
             });
           }
         }, {
           key: 'updateChannelList',
           value: function updateChannelList() {
-            var self = this;
+            var _this5 = this;
+
             var sensor, device;
-            self.metric.channelList = [{ name: '*', visible_name: 'All' }, { name: '!', visible_name: 'Last Message' }];
-            this.addTemplatedVariables(self.metric.channelList);
+            this.metric.channelList = [{ name: '*', visible_name: 'All' }, { name: '!', visible_name: 'Last Message' }];
+            this.addTemplatedVariables(this.metric.channelList);
             if (this.target.sensor) {
-              sensor = this.target.sensor.name || undefined;
-              if (typeof sensor == "string") {
-                sensor = this.templateSrv.replace(sensor);
-                device = this.templateSrv.replace(self.target.device.name);
-              }
+              sensor = this.target.sensor.name;
+              sensor = this.templateSrv.replace(sensor);
+              device = this.templateSrv.replace(this.target.device.name);
               this.datasource.prtgAPI.performChannelSuggestQuery(sensor, device).then(function (channels) {
                 _.map(channels, function (channel) {
-                  self.metric.channelList.push({ name: channel.name, visible_name: self.target.sensor.visible_name + ": " + channel.name });
+                  _this5.metric.channelList.push({ name: channel.name, visible_name: channel.name });
                 });
               });
             }

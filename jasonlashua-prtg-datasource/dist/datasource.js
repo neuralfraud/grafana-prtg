@@ -39,7 +39,7 @@ System.register(['lodash', 'app/core/utils/datemath', './PRTGAPIService'], funct
             _export('PRTGDataSource', PRTGDataSource = function () {
 
                 /** @ngInject */
-                function PRTGDataSource(instanceSettings, $q, templateSrv, alertSrv, PRTGAPIService) {
+                function PRTGDataSource(instanceSettings, templateSrv, alertSrv, PRTGAPIService) {
                     _classCallCheck(this, PRTGDataSource);
 
                     /**
@@ -47,32 +47,30 @@ System.register(['lodash', 'app/core/utils/datemath', './PRTGAPIService'], funct
                     * 
                     * @param {object} Grafana Datasource Object
                     */
+                    this.templateSrv = templateSrv;
+                    this.alertServ = alertSrv;
 
                     this.name = instanceSettings.name;
                     this.url = instanceSettings.url;
                     this.username = instanceSettings.jsonData.prtgApiUser;
-                    this.password = instanceSettings.jsonData.prtgApiPassword;
-                    this.useCache = instanceSettings.jsonData.useCache || false;
+                    this.passhash = instanceSettings.jsonData.prtgApiPasshash;
                     this.cacheTimeoutMintues = instanceSettings.jsonData.cacheTimeoutMinutes || 5;
                     this.limitmetrics = instanceSettings.meta.limitmetrics || 100;
-                    this.prtgAPI = new PRTGAPIService(this.url, this.username, this.password, this.useCache, this.cacheTimeoutMintues);
-                    this.q = $q;
-                    this.templateSrv = templateSrv;
-                    this.alertServ = alertSrv;
-                    console.log("hello");
+                    this.prtgAPI = new PRTGAPIService(this.url, this.username, this.passhash, this.cacheTimeoutMintues);
                 }
 
                 /**
-                * Test the datasource
-                */
+                 * Test the datasource
+                 */
 
 
                 _createClass(PRTGDataSource, [{
                     key: 'testDatasource',
                     value: function testDatasource() {
-                        var self = this;
+                        var _this = this;
+
                         return this.prtgAPI.getVersion().then(function (apiVersion) {
-                            return self.prtgAPI.performPRTGAPILogin().then(function () {
+                            return _this.prtgAPI.performPRTGAPILogin().then(function () {
                                 return {
                                     status: "success",
                                     title: "Success",
@@ -91,10 +89,10 @@ System.register(['lodash', 'app/core/utils/datemath', './PRTGAPIService'], funct
                 }, {
                     key: 'query',
                     value: function query(options) {
+                        var _this2 = this;
+
                         var from = Math.ceil(dateMath.parse(options.range.from) / 1000);
                         var to = Math.ceil(dateMath.parse(options.range.to) / 1000);
-
-                        var self = this;
                         var promises = _.map(options.targets, function (target) {
                             if (target.hide || !target.group || !target.device || !target.channel || !target.sensor) {
                                 return [];
@@ -104,48 +102,42 @@ System.register(['lodash', 'app/core/utils/datemath', './PRTGAPIService'], funct
                                 group,
                                 sensor,
                                 channel = "";
-                            //in the first release which didn't have template support, I chose numeric id's. this caused problems for templateSrv.replace.  
-                            try {
-                                group = this.templateSrv.replace(target.group.name);
-                                device = this.templateSrv.replace(target.device.name);
-                                sensor = this.templateSrv.replace(target.sensor.name);
-                                channel = this.templateSrv.replace(target.channel.name);
-                            } catch (e) {
-                                var d = this.q.defer();
-                                var err = "<p style=\"font-size: 150%; font-weight: bold;\">One or more target's name is not a string!</p><p>All target names should be strings. This should never happen. Your targets were:<br><b>Group:</b> " + target.group.name + "<br><b>Device:</b> " + target.device.name + "<br><b>Sensor:</b> " + target.sensor.name + "<br><b>Channel:</b> " + target.channel.name + "</p>";
-                                d.reject({ message: err });
-                                return d.promise;
-                            }
+                            group = _this2.templateSrv.replace(target.group.name);
+                            device = _this2.templateSrv.replace(target.device.name);
+                            sensor = _this2.templateSrv.replace(target.sensor.name);
+                            channel = _this2.templateSrv.replace(target.channel.name);
 
-                            return self.prtgAPI.getValues(device, sensor, channel, from, to).then(function (values) {
-                                var timeseries = { target: target.channel.visible_name, datapoints: values };
+                            return _this2.prtgAPI.getValues(device, sensor, channel, from, to).then(function (values) {
+                                var timeseries = { target: target.alias, datapoints: values };
                                 return timeseries;
                             });
-                        }, this);
+                        });
 
-                        return this.q.all(_.flatten(promises)).then(function (results) {
+                        return Promise.all(_.flatten(promises)).then(function (results) {
                             return { data: results };
                         });
                     }
                 }, {
                     key: 'annotationQuery',
                     value: function annotationQuery(options) {
+                        var _this3 = this;
+
                         var from = Math.ceil(dateMath.parse(options.range.from) / 1000);
                         var to = Math.ceil(dateMath.parse(options.range.to) / 1000);
                         return this.prtgAPI.getMessages(from, to, options.annotation.sensorId).then(function (messages) {
                             _.each(messages, function (message) {
                                 message.annotation = options.annotation; //inject the annotation into the object
-                            }, this);
+                            }, _this3);
                             return messages;
                         });
                     }
                 }, {
                     key: 'metricFindQuery',
                     value: function metricFindQuery(query) {
+                        var _this4 = this;
+
                         if (!query.match(/(channel|sensor|device|group):(\*)|(tags|sensor|device|group)=([\$\sa-zA-Z0-9-_]+)/i)) {
-                            var d = this.q.defer();
-                            d.reject("Syntax Error: Expected pattern matching /(sensors|devices|groups):(\*)|(tags|device|group)=([a-zA-Z0-9]+)/i");
-                            return d.promise;
+                            return Promise.reject("Syntax Error: Expected pattern matching /(sensors|devices|groups):(\*)|(tags|device|group)=([a-zA-Z0-9]+)/i");
                         }
                         var params = "";
                         var a = query.split(':');
@@ -162,7 +154,7 @@ System.register(['lodash', 'app/core/utils/datemath', './PRTGAPIService'], funct
                         return this.prtgAPI.performPRTGAPIRequest('table.json', params).then(function (results) {
                             return _.map(results, function (res) {
                                 return { text: res[a[0]], expandable: 0 };
-                            }, this);
+                            }, _this4);
                         });
                     }
                 }]);
