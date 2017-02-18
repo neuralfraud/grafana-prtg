@@ -1,0 +1,41 @@
+<datasource-http-settings current="ctrl.current">
+</datasource-http-settings>
+
+<div class="gf-form-group">
+  <h3 class="page=heading">PRTG API Configuration</h3>
+  <div class="gf-form">
+    <span class="gf-form-label width-7">
+      Username
+    </span>
+    <input class="gf-form-input max-width-21"
+           type="text"
+           ng-model='ctrl.current.jsonData.prtgApiUser'
+           placeholder="user"
+           required>
+    </input>
+  </div>
+
+  <div class="gf-form">
+    <span class="gf-form-label width-7">
+      Passhash
+    </span>
+    <input class="gf-form-input max-width-21"
+           type="password"
+           ng-model='ctrl.current.jsonData.prtgApiPasshash'
+           placeholder="password"
+           required>
+    </input>
+  </div>    
+   
+   <div class="gf-form">
+    <span class="gf-form-label width-7">
+      Cache timeout
+    </span>
+    <input class="gf-form-input max-width-7"
+           type="text"
+           ng-model="ctrl.current.jsonData.cacheTimeoutMinutes"
+           placeholder="minutes"
+           required>
+    </input>
+   </div>
+</div>

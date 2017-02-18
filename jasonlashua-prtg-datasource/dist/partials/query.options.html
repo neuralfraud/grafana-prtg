@@ -1,0 +1,48 @@
+<section class="grafana-metric-options">
+	 <div class="gf-form">
+		<ul class="gf-form-list">
+			<li class="gf-form-item gf-form-item-icon">
+				<i class="fa fa-wrench"></i>
+			</li>
+			<li class="gf-form-item">
+				Max data points
+			</li>
+			<li>
+				<input type="text"
+					class="input-mini gf-form-input"
+					ng-model="panel.maxDataPoints"
+					bs-tooltip="'Override max data points, automatically set to graph width in pixels.'"
+					data-placement="right"
+					ng-model-onblur ng-change="get_data()"
+					spellcheck='false'
+					placeholder="auto">
+			</li>
+		</ul>
+		<div class="clearfix"></div>
+	</div>
+	<div class="gf-form">
+		<ul class="gf-form-list">
+			<li class="gf-form-item gf-form-item-icon">
+				<i class="fa fa-info-circle"></i>
+			</li>
+			<li class="gf-form-item">
+				<a ng-click="toggleEditorHelp(1)" bs-tooltip="'click to show helpful info'" data-placement="bottom">
+					max data points
+				</a>
+			</li>
+		</ul>
+		<div class="clearfix"></div>
+	</div>
+</section>
+<div class="editor-row">
+	<div class="pull-left" style="margin-top: 30px;">
+
+		<div class="grafana-info-box span6" ng-if="editorHelpIndex === 1">
+			<h5>Max data points</h5>
+			<ul>
+				<li>Don't exceed pixel width of graph. Don't go crazy. Your graphs are built from real-time queries. Perhaps you should consider a SQL summary database?</li>
+			</ul>
+		</div>
+	</div>
+</div>
+
