@@ -7,17 +7,15 @@ import { XMLXform } from './xmlparser';
  */
 
 /** @ngInject */
-function PRTGAPIService($q, alertSrv, backendSrv) {
+function PRTGAPIService(alertSrv, backendSrv) {
     
     class PRTGAPI {
-        constructor (api_url, username, password, useCache, cacheTimeoutMinutes) {
+        constructor (api_url, username, passhash, cacheTimeoutMinutes) {
           this.url              = api_url;
           this.username         = username;
-          this.password         = password;
-          this.passhash         = null;
+          this.passhash         = passhash;
           this.lastId           = false;
           this.cache            = {};
-          this.useCache = 		useCache;
           this.cacheTimeoutMinutes = cacheTimeoutMinutes;
           this.alertSrv         = alertSrv;
           this.backendSrv       = backendSrv;
@@ -32,7 +30,7 @@ function PRTGAPIService($q, alertSrv, backendSrv) {
             if ((Date.now() - this.cache[this.hashValue(url)]) > (this.cacheTimeoutMinutes * 60 * 1000)) {
                 return false;
             }
-            if (this.useCache && this.cache[this.hashValue(url)]) {
+            if (this.cache[this.hashValue(url)]) {
                 return true;
             }
             return false;
@@ -45,9 +43,7 @@ function PRTGAPIService($q, alertSrv, backendSrv) {
         * @return promise
         */
         getCache(url)    {
-            var d = $q.defer();
-            d.resolve(this.cache[this.hashValue(url)]);
-            return d.promise;
+            return Promise.resolve(this.cache[this.hashValue(url)]);
         }
         
         /**
@@ -58,10 +54,8 @@ function PRTGAPIService($q, alertSrv, backendSrv) {
         * @return promise
         */
         setCache(url, data)    {
-            var d = $q.defer();
             this.cache[this.hashValue(url)] = data;
-            d.resolve(this.cache[this.hashValue(url)]);
-            return d.promise;
+            return this.getCache(url);
         }
         
         /**
@@ -71,7 +65,16 @@ function PRTGAPIService($q, alertSrv, backendSrv) {
         * @param  e string to hash
         * @return int32
         */
-        hashValue(e)    {for(var r=0,i=0;i<e.length;i++)r=(r<<5)-r+e.charCodeAt(i),r&=r;return r}
+        hashValue(str) {
+            var hash = 0;
+            if (str.length === 0) return hash;
+            for (var i = 0; i < str.length; i++) {
+                var char = str.charCodeAt(i);
+                hash = ((hash<<5)-hash)+char;
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            return hash;
+        }
         
         /**
          * pad date parts and optionally add one
@@ -100,54 +103,52 @@ function PRTGAPIService($q, alertSrv, backendSrv) {
          * @return promise
          */
         performPRTGAPIRequest(method, params) {
-            var queryString = 'username=' + this.username + '&password=' + this.password + '&' + params;
+            var queryString = 'username=' + this.username + '&passhash=' + this.passhash + '&' + params;
             var options = {
                 method: 'GET',
                 url: this.url + '/' + method + '?' + queryString
             };
-      
-            var d = $q.defer(); //required to keep execution within the originating promise's context
+            
             if (this.inCache(options.url)) {
               return this.getCache(options.url);
             } else {
-              return this.setCache(options.url, this.backendSrv.datasourceRequest(options).then(function (response) {
-                if (!response.data) {
-                  d.reject({message: "Response contained no data"});
-                  return d.promise;
-                } 
-          
-                if (response.data.groups) {
-                  return response.data.groups;
-                }
-                else if (response.data.devices) {
-                  return response.data.devices;
-                }
-                else if (response.data.sensors) {
-                  return response.data.sensors;
-                }
-                else if (response.data.channels) {
-                  return response.data.channels;
-                }
-                else if (response.data.values) {
-                  return response.data.values;
-                }
-                else if (response.data.sensordata) {
-                  return response.data.sensordata;
-                }
-                else if (response.data.messages) {
-                  return response.data.messages;
-                }
-                else if (response.data.Version) { //status request
-                  return response.data;
-                } else {  //All else is XML from table.xml so throw it into the transformer and get JSON back.
-                  if (response.data == "Not enough monitoring data") {
-                    //Fixes Issue #5 - reject the promise with a message. The message is displayed instead of an uncaught exception.
-                    d.reject({message: "<p style=\"font-size: 150%; font-weight: bold\">Not enough monitoring data.</p><p>Request:<br> &quot;" + params + "&quot;</p>"});
-                    return d.promise;
-                  }
-                  return new XMLXform(method, response.data);
-                }
-              }, function (err) {
+              return this.setCache(options.url, this.backendSrv.datasourceRequest(options)
+                .then(response => {
+                    if (!response.data) {
+                        return Promise.reject({message: "Response contained no data"});
+                    } 
+                    
+                    if (response.data.groups) {
+                      return response.data.groups;
+                    }
+                    else if (response.data.devices) {
+                      return response.data.devices;
+                    }
+                    else if (response.data.sensors) {
+                      return response.data.sensors;
+                    }
+                    else if (response.data.channels) {
+                      return response.data.channels;
+                    }
+                    else if (response.data.values) {
+                      return response.data.values;
+                    }
+                    else if (response.data.sensordata) {
+                      return response.data.sensordata;
+                    }
+                    else if (response.data.messages) {
+                      return response.data.messages;
+                    }
+                    else if (response.data.Version) { //status request
+                      return response.data;
+                    } else {  //All else is XML from table.xml so throw it into the transformer and get JSON back.
+                      if (response.data == "Not enough monitoring data") {
+                        //Fixes Issue #5 - reject the promise with a message. The message is displayed instead of an uncaught exception.
+                        return Promise.reject({message: "<p style=\"font-size: 150%; font-weight: bold\">Not enough monitoring data.</p><p>Request:<br> &quot;" + params + "&quot;</p>"});
+                      }
+                      return new XMLXform(method, response.data);
+                    }
+              }, err => {
                 if (err.data.match(/<error>/g)) {
                   var regex = /<error>(.*)<\/error>/g;
                   var res = regex.exec(err.data);
@@ -155,8 +156,7 @@ function PRTGAPIService($q, alertSrv, backendSrv) {
                 } else {
                   err.message = "Unknown error: " + err.data;
                 }
-                d.reject(err);
-                return d.promise;
+                return Promise.reject(err);
               }));
             }   
         }
@@ -168,7 +168,7 @@ function PRTGAPIService($q, alertSrv, backendSrv) {
                   return "ERROR. No response.";
                 } else {
                   return response.Version;
-              }
+                }
             });
         }
     
@@ -178,14 +178,13 @@ function PRTGAPIService($q, alertSrv, backendSrv) {
          */
         performPRTGAPILogin() {
             var username = this.username;
-            var password = this.password;
+            var passhash = this.passhash;
             var options = {
                 method: 'GET',
-                url: this.url + "/getpasshash.htm?username=" + username + "&password=" + password
+                url: this.url + "/getstatus.htm?id=0&username=" + username + "&passhash=" + passhash
             };
-            var self = this; //fix for es6? 
-            return this.backendSrv.datasourceRequest(options).then(function (response) {
-                self.passhash = response;
+            return this.backendSrv.datasourceRequest(options).then(response => {
+                this.passhash = response;
                 return response;
             });
         }
@@ -230,24 +229,23 @@ function PRTGAPIService($q, alertSrv, backendSrv) {
          * @return promise - JSON result set
          */
         performChannelSuggestQuery(sensorId, device) {
-            var self = this;
             var arr = [{"device": device}, {"sensor":sensorId}];
             var p = [];
-            p = _.map(arr, function(a) {
+            p = _.map(arr, a => {
                 if (a.device && typeof a.device == "string") {
-                     return self.getDeviceByName(a.device);
+                     return this.getDeviceByName(a.device);
                 }
                 
                 if (a.sensor && typeof a.sensor == "string") {
-                    return self.getSensorByName(a.sensor,arr[0].device);
+                    return this.getSensorByName(a.sensor,arr[0].device);
                 }
                 
             });
             
-            return $q.all(p).then(function(a) {
+            return Promise.all(p).then(a => {
                 var sensor = a[1][0].objid;
                 var params = 'content=channels&columns=objid,channel,sensor,name&id=' + sensor;
-                return self.performPRTGAPIRequest('table.json', params);
+                return this.performPRTGAPIRequest('table.json', params);
             });
         }
     
@@ -290,14 +288,14 @@ function PRTGAPIService($q, alertSrv, backendSrv) {
          * @return array
          */
         getValues(deviceId, sensorId, channelId, dateFrom, dateTo) {
-            var self = this;
-            return this.getDeviceByName(deviceId).then(function (deviceObj) {
+            return this.getDeviceByName(deviceId).then(deviceObj => {
+                var device;
                 try {
-                    var device = deviceObj[0].objid;
+                    device = deviceObj[0].objid;
                 } catch (e) {
                     return [];
-                }
-                return self.getSensorByName(sensorId, device).then(function(sensorObj) {
+                }       
+                return this.getSensorByName(sensorId, device).then(sensorObj => {
                     var sensor = sensorObj[0].objid;
                     var hours = ((dateTo-dateFrom) / 3600);
                     var avg = 0;
@@ -310,18 +308,18 @@ function PRTGAPIService($q, alertSrv, backendSrv) {
                     }
                 
                     var method = "historicdata.xml";
-                    var params = "id=" + sensor + "&sdate=" + self.getPRTGDate(dateFrom) + "&edate=" + self.getPRTGDate(dateTo) + "&avg=" + avg + "&pctshow=false&pctmode=false";
+                    var params = "id=" + sensor + "&sdate=" + this.getPRTGDate(dateFrom) + "&edate=" + this.getPRTGDate(dateTo) + "&avg=" + avg + "&pctshow=false&pctmode=false";
             
                     if (channelId == '!') {
-                        var params = "&id=" + sensor;
-                        return self.performPRTGAPIRequest('getsensordetails.json', params).then(function (results) {
+                        params = "&id=" + sensor;
+                        return this.performPRTGAPIRequest('getsensordetails.json', params).then(results => {
                             var message = results.lastmessage;
                             var timestamp = results.lastcheck.replace(/(\s\[[\d\smsago\]]+)/g,'');
                             var dt = Math.round((timestamp - 25569) * 86400,0) * 1000;
                             return [message, dt];
                         });
                     } else {
-                        return self.performPRTGAPIRequest(method, params).then(function(results) {
+                        return this.performPRTGAPIRequest(method, params).then(results => {
                             var result = [];
                             if (!results.histdata) {
                                 return results;
@@ -330,18 +328,20 @@ function PRTGAPIService($q, alertSrv, backendSrv) {
         
                             for (var i=0;i<rCnt;i++)
                             {
-                                
+                                var v;
                                 var dt = Math.round((results.histdata.item[i].datetime_raw - 25569) * 86400,0) * 1000;
                                 if (results.histdata.item[i].value_raw && (results.histdata.item[i].value_raw.length > 0))
                                 {
+                                    //FIXME: better way of dealing with multiple channels of same name
+                                    //IE you select "Traffic In" but PRTG provides Volume AND Speed channels.
                                     for (var j = 0; j < results.histdata.item[i].value_raw.length; j++) {
                                       //workaround for SNMP Bandwidth Issue #3. Check for presence of (speed) suffix, and use that.
-                                      if (results.histdata.item[i].value_raw[j].channel.match(channelId + " (speed)") || results.histdata.item[i].value_raw[j].channel == channelId) {
-                                        var v = Number(results.histdata.item[i].value_raw[j].text);
+                                      if (results.histdata.item[i].value_raw[j].channel.match(channelId + ' [(]speed[)]') || results.histdata.item[i].value_raw[j].channel == channelId) {
+                                        v = Number(results.histdata.item[i].value_raw[j].text);
                                       }
                                     }
                                 } else if (results.histdata.item[i].value_raw) {
-                                    var v = Number(results.histdata.item[i].value_raw.text);
+                                     v = Number(results.histdata.item[i].value_raw.text);
                                 }
                                 result.push([v, dt]);
                             }
@@ -351,6 +351,7 @@ function PRTGAPIService($q, alertSrv, backendSrv) {
                 });
             });
         }
+        
         /**
          * Retrieve messages for a given sensor.
          * 

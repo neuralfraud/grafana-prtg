@@ -1,7 +1,7 @@
 # grafana-prtg
 A PRTG Datasource plugin for Grafana (BETA!!)
 
-Works with 3.1 (**real beta**) - just drop the "jasonlashua-prtg-datasource" folder into the "data/plugins" folder of your Grafana installation and restart the grafana server.
+Works with 4.x - just drop the "jasonlashua-prtg-datasource" folder into the "data/plugins" folder of your Grafana installation and restart the grafana server.
 
 ![Grafana](https://neuralfraud.github.io/grafana.png)
 

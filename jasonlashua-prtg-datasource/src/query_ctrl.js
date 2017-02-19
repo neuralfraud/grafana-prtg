@@ -1,11 +1,9 @@
 /**
  * Grafana Datasource Plugin for PRTG API Interface (ALPHA)
  * Query Control Interface
- * 20151206 03:10 Jason Lashua
- * Proof of Concept. Based on publicly available plugins.
+ * 20170218 Jason Lashua
  *
- * DOES: Gets data by channel by device. Groups, Devices, Sensors and Channels available.
- * DOES NOT (yet): Trending, Histoic Data, Templating, Annotations
+ * Updated for es6
  */
 
 import {QueryCtrl} from 'app/plugins/sdk';
@@ -13,11 +11,7 @@ import _ from 'lodash';
 
 export class PRTGQueryController extends QueryCtrl {
 
-  // ZabbixQueryCtrl constructor
   constructor($scope, $injector, $sce, $q, templateSrv) {
-
-  
-    // Call superclass constructor
     super($scope, $injector);
     this.init = function() {
       var target = this.target;
@@ -28,167 +22,119 @@ export class PRTGQueryController extends QueryCtrl {
         oldTarget: _.cloneDeep(this.target)
       };
       _.defaults(this, scopeDefaults);
-
-      this.metric = {
-        groupList: ["Loading..."],
-        deviceList: ["Loading..."],
-        sensorList: ["Loading..."],
-        channelList: ["Loading..."]
-      };
       
-      //update the picklists
       this.updateGroupList();
       this.updateDeviceList();
       this.updateSensorList();
       this.updateChannelList();
-      this.setChannelAlias();
+
       this.target.errors = this.validateTarget(target);
+    
+      //the zabbix-grafana guys are way more smarter than i am, brilliant idea.      
+      this.getGroupNames = _.partial(getMetricNames, this, 'groupList');
+      this.getDeviceNames = _.partial(getMetricNames, this, 'deviceList');
+      this.getSensorNames = _.partial(getMetricNames, this, 'sensorList');
+      this.getChannelNames = _.partial(getMetricNames, this, 'channelList');
     };
     this.init();
   }
+  
   /**
-  * Take alias from channel name by default
+  * Alias is comprised of the device name, sensor and channel, e.g., FILESERV1: DNS Response Time.
   */
-  setChannelAlias() {
-    if (!this.target.alias && this.target.channel) {
-      this.target.alias = this.target.channel.name;
-    }
+  setTargetAlias() {
+    this.target.alias = this.target.device.name + ": " + this.target.sensor.name + " " + this.target.channel.name;
   }
   
-  targetBlur() {
-    this.setChannelAlias();
-    this.target.errors = validateTarget(this.target);
-    if (!_.isEqual(this.oldTarget, this.target) && _.isEmpty(this.target.errors)) {
-      this.oldTarget = angular.copy(this.target);
+  // take action on target update and refresh the model? whatever the hell angular actually does is beyond me... 
+  targetChange() {
+    var newTarget = _.cloneDeep(this.target);
+    if (!_.isEqual(this.oldTarget, this.target)) {
+      this.oldTarget = newTarget;
       this.panelCtrl.refresh();
     }
   }
 
-  //
-  // the next series of functions performs queries that first populate the list of
-  // groups, then populating subsequent lists once the lower item is selected
-  
+  /*
+   * Select functions: when a object is selected or typed into the input,
+   * refresh the next list based on the data entered in the previous input.
+   * This is all necessary because the only way to get values from PRTG is by knowing a sensor ID
+   * So we basically perform a single object search, one peice at a time, then we know the sensor ID, and the channel name can be picked.
+   */
   selectGroup() {
     this.updateDeviceList();
-    this.target.errors = this.validateTarget(this.target);
-    if (!_.isEqual(this.oldTarget, this.target) && _.isEmpty(this.target.errors)) {
-      this.oldTarget = angular.copy(this.target);
-      this.panelCtrl.refresh();
-    }
+    this.targetChange();
   }
   
   selectDevice() {
     this.updateSensorList();
-    
-    this.target.errors = this.validateTarget(this.target);
-    if (!_.isEqual(this.oldTarget, this.target) && _.isEmpty(this.target.errors)) {
-      this.oldTarget = angular.copy(this.target);
-      this.panelCtrl.refresh();
-    }
+    this.targetChange();
   }
   
   selectSensor() {
     this.updateChannelList();
-    this.setChannelAlias();
-    this.target.errors = this.validateTarget(this.target);
-    if (!_.isEqual(this.oldTarget, this.target) && _.isEmpty(this.target.errors)) {
-      this.oldTarget = angular.copy(this.target);
-      this.panelCtrl.refresh();
-    }
+    this.targetChange();
   }
   
   selectChannel() {
-    this.target.errors = this.validateTarget(this.target);
-    if (!_.isEqual(this.oldTarget, this.target) && _.isEmpty(this.target.errors)) {
-      this.oldTarget = angular.copy(this.target);
-      this.panelCtrl.refresh();
-    }
+    this.setTargetAlias();
+    this.targetChange();
   }
   
-  updateChannel() {
-    this.target.errors = this.validateTarget(this.target);
-    if (!_.isEqual(this.oldTarget, this.target) && _.isEmpty(this.target.errors)) {
-      this.target.channel.name = number(this.oldTarget.channel.name) + this.target.channelFilter;
-      this.oldTarget = angular.copy(this.target);
-      this.panelCtrl.refresh();
-    }
-  }
-
-
-  duplicate() {
-    var clone = angular.copy(this.target);
-    this.panel.targets.push(clone);
-  }
-
-  moveMetricQuery(fromIndex, toIndex) {
-    _.move(this.panel.targets, fromIndex, toIndex);
-  }
-
-  //
-  // this section incorporates the logic to query the API to get list items
-  //
-  
+  /*
+   * Update the content of each list
+  */   
   updateGroupList() {
-    var self = this;
-    self.metric.groupList = [{name: '*', visible_name: 'All'}];
-    this.addTemplatedVariables(self.metric.groupList);
-    this.datasource.prtgAPI.performGroupSuggestQuery().then(function (groups) {
-      _.map(groups, function(group) {
-        self.metric.groupList.push({name: group.group, visible_name: group.group});
+    this.metric.groupList = [{name: '*', visible_name: 'All'}];
+    this.addTemplatedVariables(this.metric.groupList);
+    this.datasource.prtgAPI.performGroupSuggestQuery().then(groups => {
+      _.map(groups, group => { 
+        this.metric.groupList.push({name: group.group, visible_name: group.group});
       });
     });
   }
   
   updateDeviceList() {
-    var self = this;
-    var groups;
-    self.metric.deviceList = [{name: '*', visible_name: 'All'}];
-    this.addTemplatedVariables(self.metric.deviceList);
+    var group;
+    this.metric.deviceList = [{name: '*', visible_name: 'All'}];
+    this.addTemplatedVariables(this.metric.deviceList);
     if (this.target.group) {
-      groups = this.target.group.name || undefined;
+      group = this.target.group.name || undefined;
+      group = this.templateSrv.replace(group);
     }
-    if (typeof groups == "string") {
-      groups = this.templateSrv.replace(groups);
-    }
-    this.datasource.prtgAPI.performDeviceSuggestQuery(groups).then(function (devices) {
-      _.map(devices, function(device) {
-        self.metric.deviceList.push({name: device.device, visible_name: device.device});
+    this.datasource.prtgAPI.performDeviceSuggestQuery(group).then(devices => {
+      _.map(devices, device => {
+        this.metric.deviceList.push({name: device.device, visible_name: device.device});
       });
     });
   }
 
   updateSensorList() {
-    var self = this;
     var device;
-    self.metric.sensorList = [{name: '*', visible_name: 'All'}];
-    this.addTemplatedVariables(self.metric.sensorList);
+    this.metric.sensorList = [{name: '*', visible_name: 'All'}];
+    this.addTemplatedVariables(this.metric.sensorList);
     if (this.target.device) {
       device = this.target.device.name || undefined;
-    }
-    if (typeof device == "string") {
       device = this.templateSrv.replace(device);
     }
-    this.datasource.prtgAPI.performSensorSuggestQuery(device).then(function (sensors) {
-      _.map(sensors, function(sensor) {
-        self.metric.sensorList.push({name: sensor.sensor, visible_name: sensor.sensor});
+    this.datasource.prtgAPI.performSensorSuggestQuery(device).then(sensors => {
+      _.map(sensors, sensor => {
+        this.metric.sensorList.push({name: sensor.sensor, visible_name: sensor.sensor});
       });
     });
   }
 
   updateChannelList() {
-    var self = this;
     var sensor, device;
-    self.metric.channelList = [{name: '*', visible_name: 'All'},{name: '!', visible_name: 'Last Message'}];
-    this.addTemplatedVariables(self.metric.channelList);
+    this.metric.channelList = [{name: '*', visible_name: 'All'},{name: '!', visible_name: 'Last Message'}];
+    this.addTemplatedVariables(this.metric.channelList);
     if (this.target.sensor) {
-      sensor = this.target.sensor.name || undefined;
-      if (typeof sensor == "string") {
-        sensor = this.templateSrv.replace(sensor);
-        device = this.templateSrv.replace(self.target.device.name);
-      }
-      this.datasource.prtgAPI.performChannelSuggestQuery(sensor, device).then(function (channels) {
-        _.map(channels, function(channel) {
-          self.metric.channelList.push({name: channel.name, visible_name: self.target.sensor.visible_name + ": " + channel.name});
+      sensor = this.target.sensor.name;
+      sensor = this.templateSrv.replace(sensor);
+      device = this.templateSrv.replace(this.target.device.name);
+      this.datasource.prtgAPI.performChannelSuggestQuery(sensor, device).then(channels => {
+        _.map(channels, channel => {
+          this.metric.channelList.push({name: channel.name, visible_name: channel.name});
         });
       });
     }
@@ -221,3 +167,7 @@ export class PRTGQueryController extends QueryCtrl {
 // Set templateUrl as static property
 PRTGQueryController.templateUrl = './partials/query.editor.html';
 
+// I stole this from grafana-zabbix, err, I mean, I was inspired by grafana-zabbix ;) 
+function getMetricNames(scope, metricList) {  
+  return _.uniq(_.map(scope.metric[metricList], 'name'));
+}
