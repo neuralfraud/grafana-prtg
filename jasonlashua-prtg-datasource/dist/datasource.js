@@ -148,7 +148,7 @@ System.register(['lodash', 'app/core/utils/datemath', './PRTGAPIService'], funct
                         } else {
                             params = "&content=" + a[0] + "s";
                             if (a[1] !== '*') {
-                                params = params + "&filter_" + templateSrv.replace(a[1]);
+                                params = params + "&filter_" + this.templateSrv.replace(a[1]);
                             }
                         }
                         return this.prtgAPI.performPRTGAPIRequest('table.json', params).then(function (results) {
