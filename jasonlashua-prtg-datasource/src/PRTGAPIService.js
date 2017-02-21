@@ -118,7 +118,7 @@ function PRTGAPIService(alertSrv, backendSrv) {
                         return Promise.reject({message: "Response contained no data"});
                     } 
                     if (response.data.histdata) {
-                        return response.data.histdata;
+                        return response.data;
                     }
                     else if (response.data.groups) {
                       return response.data.groups;

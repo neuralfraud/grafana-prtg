@@ -103,7 +103,7 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
                                 return Promise.reject({ message: "Response contained no data" });
                             }
                             if (response.data.histdata) {
-                                return response.data.histdata;
+                                return response.data;
                             } else if (response.data.groups) {
                                 return response.data.groups;
                             } else if (response.data.devices) {
