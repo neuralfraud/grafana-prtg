@@ -147,16 +147,6 @@ export class XMLXform {
             json = xsltProcessor2.transformToFragment(newxml, document).textContent;
         return JSON.parse(json);
     }
-<<<<<<< HEAD:PRTG/xmlparser.js
-    var xsltProcessor = new XSLTProcessor();
-        xsltProcessor.importStylesheet(xmlXform.xslt);
-        newxml = xsltProcessor.transformToDocument(xmlXform.xml);
-    // Using a separate XSLTProcessor instance resolves issue with Firefox.
-    var xsltProcessor2 = new XSLTProcessor();
-        xsltProcessor2.importStylesheet(xmlXform.xslt2);
-        json = xsltProcessor2.transformToFragment(newxml, document).textContent;
-    return JSON.parse(json);
-=======
->>>>>>> refs/remotes/origin/master:jasonlashua-prtg-datasource/src/xmlparser.js
+
 }
 

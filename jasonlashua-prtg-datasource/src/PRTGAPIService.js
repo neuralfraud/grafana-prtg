@@ -117,8 +117,10 @@ function PRTGAPIService(alertSrv, backendSrv) {
                     if (!response.data) {
                         return Promise.reject({message: "Response contained no data"});
                     } 
-                    
-                    if (response.data.groups) {
+                    if (response.data.histdata) {
+                        return response.data.histdata;
+                    }
+                    else if (response.data.groups) {
                       return response.data.groups;
                     }
                     else if (response.data.devices) {
@@ -307,8 +309,8 @@ function PRTGAPIService(alertSrv, backendSrv) {
                         avg = "86400";
                     }
                 
-                    var method = "historicdata.xml";
-                    var params = "id=" + sensor + "&sdate=" + this.getPRTGDate(dateFrom) + "&edate=" + this.getPRTGDate(dateTo) + "&avg=" + avg + "&pctshow=false&pctmode=false";
+                    var method = "historicdata.json";
+                    var params = "usecaption=true&id=" + sensor + "&sdate=" + this.getPRTGDate(dateFrom) + "&edate=" + this.getPRTGDate(dateTo) + "&avg=" + avg + "&pctshow=false&pctmode=false";
             
                     if (channelId == '!') {
                         params = "&id=" + sensor;
