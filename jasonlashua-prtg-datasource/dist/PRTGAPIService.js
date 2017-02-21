@@ -102,8 +102,9 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
                             if (!response.data) {
                                 return Promise.reject({ message: "Response contained no data" });
                             }
-
-                            if (response.data.groups) {
+                            if (response.data.histdata) {
+                                return response.data.histdata;
+                            } else if (response.data.groups) {
                                 return response.data.groups;
                             } else if (response.data.devices) {
                                 return response.data.devices;
@@ -256,8 +257,8 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
                                 avg = "86400";
                             }
 
-                            var method = "historicdata.xml";
-                            var params = "id=" + sensor + "&sdate=" + _this3.getPRTGDate(dateFrom) + "&edate=" + _this3.getPRTGDate(dateTo) + "&avg=" + avg + "&pctshow=false&pctmode=false";
+                            var method = "historicdata.json";
+                            var params = "usecaption=true&id=" + sensor + "&sdate=" + _this3.getPRTGDate(dateFrom) + "&edate=" + _this3.getPRTGDate(dateTo) + "&avg=" + avg + "&pctshow=false&pctmode=false";
 
                             if (channelId == '!') {
                                 params = "&id=" + sensor;
