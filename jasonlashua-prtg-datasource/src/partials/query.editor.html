@@ -1,0 +1,56 @@
+<query-editor-row query-ctrl="ctrl" can-collapse="false">
+	<div class="gf-form-inline">
+		<div class="gf-form max-width-20">
+			<label class="gf-form-label query-keyword width-7">Group</label>
+			<input type="text"
+			ng-model="ctrl.target.group.name"
+			bs-typeahead="ctrl.getGroupNames"
+			ng-blur="ctrl.selectGroup()"
+			data-min-length=0
+			data-items=100
+			class="gf-form-input">
+			</input>
+		</div>
+		<div class="gf-form max-width-40">
+		<label class="gf-form-label query-keyword width-7">Host</label>
+		<input type="text"
+		ng-model="ctrl.target.device.name"
+		bs-typeahead="ctrl.getDeviceNames"
+		ng-blur="ctrl.selectDevice()"
+		data-min-length=0
+		data-items=100
+		class="gf-form-input">
+		</input>
+	</div>
+	<div class="gf-form gf-form--grow">
+		<div class="gf-form-label gf-form-label--grow"></div>
+		</div>
+	</div>
+	<div class="gf-form-inline">
+		<div class="gf-form max-width-40">
+			<label class="gf-form-label query-keyword width-7">Sensor</label>
+			<input type="text"
+			ng-model="ctrl.target.sensor.name"
+			bs-typeahead="ctrl.getSensorNames"
+			ng-blur="ctrl.selectSensor()"
+			data-min-length=0
+			data-items=100
+			class="gf-form-input">
+			</input>
+		</div>
+		<div class="gf-form max-width-40">
+			<label class="gf-form-label query-keyword width-7">Channel</label>
+			<input type="text"
+			ng-model="ctrl.target.channel.name"
+			bs-typeahead="ctrl.getChannelNames"
+			ng-blur="ctrl.selectChannel()"
+			data-min-length=0
+			data-items=100
+			class="gf-form-input">
+			</input>
+		</div>
+		<div class="gf-form gf-form--grow">
+			<div class="gf-form-label gf-form-label--grow"></div>
+		</div>
+	</div>
+</query-editor-row>

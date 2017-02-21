@@ -1,0 +1,25 @@
+{
+  "type": "datasource",
+  "name": "PRTG",
+  "id": "jasonlashua-prtg-datasource",
+
+  "metrics": true,
+  "annotations": true,
+  
+  "info": {
+    "description": "PRTG Datasource plugin for Grafana 3.x",
+    "author": {
+      "name": "Jason Lashua",
+      "url": "https://github.com/neuralfraud"
+    },
+    "logos": {
+      "small": "img/PRTGlogo.png",
+      "large": "img/PRTGlogo.png"
+    },
+    "links": [
+      {"name": "GitHub", "url": "https://github.com/neuralfraud/grafana-prtg"}
+    ],
+    "version": "3.1.0",
+    "updated": "2017-02-18"
+  }
+}

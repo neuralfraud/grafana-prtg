@@ -18,10 +18,11 @@
  * This results in arrays being created, which we can use.
  *
  */
-xmlXform = function (method, xmlString) {
+export class XMLXform {
+    constructor(method, xmlString) {
     
-xmlXform.xml = undefined;
-xmlXform.xslt = `<?xml version="1.0" encoding="UTF-8" ?>
+        this.xml = undefined;
+        this.xslt = `<?xml version="1.0" encoding="UTF-8" ?>
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     <!--<xsl:output method="text" encoding="utf-8"/>-->
 
@@ -58,7 +59,7 @@ xmlXform.xslt = `<?xml version="1.0" encoding="UTF-8" ?>
 </xsl:stylesheet>
 `;
 
-xmlXform.xslt2 = `<?xml version="1.0" encoding="UTF-8" ?>
+        this.xslt2 = `<?xml version="1.0" encoding="UTF-8" ?>
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     <xsl:output method="text" encoding="utf-8"/>
  
@@ -130,13 +131,23 @@ xmlXform.xslt2 = `<?xml version="1.0" encoding="UTF-8" ?>
 </xsl:stylesheet>
 `;
 
-    var json;
-    if (window.DOMParser) {
-        var parser = new DOMParser();  
-        xmlXform.xml = parser.parseFromString(xmlString, "application/xml");
-        xmlXform.xslt = parser.parseFromString(xmlXform.xslt, "application/xml");
-        xmlXform.xslt2 = parser.parseFromString(xmlXform.xslt2, "application/xml");
+        var json,newxml;
+        if (window.DOMParser) {
+            var parser = new DOMParser();  
+            this.xml = parser.parseFromString(xmlString, "application/xml");
+            this.xslt = parser.parseFromString(this.xslt, "application/xml");
+            this.xslt2 = parser.parseFromString(this.xslt2, "application/xml");
+        }
+        var xsltProcessor = new XSLTProcessor();
+            xsltProcessor.importStylesheet(this.xslt);
+            newxml = xsltProcessor.transformToDocument(this.xml);
+        // Using a separate XSLTProcessor instance resolves issue with Firefox.
+        var xsltProcessor2 = new XSLTProcessor();
+            xsltProcessor2.importStylesheet(this.xslt2);
+            json = xsltProcessor2.transformToFragment(newxml, document).textContent;
+        return JSON.parse(json);
     }
+<<<<<<< HEAD:PRTG/xmlparser.js
     var xsltProcessor = new XSLTProcessor();
         xsltProcessor.importStylesheet(xmlXform.xslt);
         newxml = xsltProcessor.transformToDocument(xmlXform.xml);
@@ -145,4 +156,7 @@ xmlXform.xslt2 = `<?xml version="1.0" encoding="UTF-8" ?>
         xsltProcessor2.importStylesheet(xmlXform.xslt2);
         json = xsltProcessor2.transformToFragment(newxml, document).textContent;
     return JSON.parse(json);
+=======
+>>>>>>> refs/remotes/origin/master:jasonlashua-prtg-datasource/src/xmlparser.js
 }
+
