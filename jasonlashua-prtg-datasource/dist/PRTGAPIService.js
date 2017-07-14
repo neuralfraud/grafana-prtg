@@ -1,9 +1,9 @@
 'use strict';
 
-System.register(['angular', 'lodash', './xmlparser'], function (_export, _context) {
+System.register(['angular', 'lodash', './utils', './xmlparser'], function (_export, _context) {
     "use strict";
 
-    var angular, _, XMLXform, _createClass;
+    var angular, _, utils, XMLXform, _createClass;
 
     function _classCallCheck(instance, Constructor) {
         if (!(instance instanceof Constructor)) {
@@ -102,9 +102,8 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
                             if (!response.data) {
                                 return Promise.reject({ message: "Response contained no data" });
                             }
-                            if (response.data.histdata) {
-                                return response.data;
-                            } else if (response.data.groups) {
+
+                            if (response.data.groups) {
                                 return response.data.groups;
                             } else if (response.data.devices) {
                                 return response.data.devices;
@@ -176,17 +175,17 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
                 }
             }, {
                 key: 'performDeviceSuggestQuery',
-                value: function performDeviceSuggestQuery(groupName) {
+                value: function performDeviceSuggestQuery(groupFilter) {
                     var params = 'content=devices&columns=objid,device';
-                    if (groupName) {
-                        params += ',group&filter_group=' + groupName;
+                    if (groupFilter) {
+                        params += ',group' + groupFilter;
                     }
                     return this.performPRTGAPIRequest('table.json', params);
                 }
             }, {
                 key: 'performSensorSuggestQuery',
-                value: function performSensorSuggestQuery(deviceId) {
-                    var params = 'content=sensors&columns=objid,sensor,device,group&filter_device=' + deviceId;
+                value: function performSensorSuggestQuery(deviceFilter) {
+                    var params = 'content=sensors&columns=objid,sensor,device,group' + deviceFilter;
                     return this.performPRTGAPIRequest('table.json', params);
                 }
             }, {
@@ -221,7 +220,10 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
             }, {
                 key: 'getSensorByName',
                 value: function getSensorByName(name, device) {
-                    var params = 'content=sensors&columns=objid,device,sensor&id=' + device + '&filter_sensor=' + name;
+                    var params = 'content=sensors&columns=objid,device,sensor&id=' + device;
+                    if (name !== '*') {
+                        params += '&filter_sensor=' + name;
+                    }
                     return this.performPRTGAPIRequest('table.json', params);
                 }
             }, {
@@ -234,9 +236,185 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
                     return this.performPRTGAPIRequest('table.json', params);
                 }
             }, {
+                key: 'filterMatch',
+                value: function filterMatch(item, filterStr) {
+                    //console.log('FilterMatch(' + item + ', ' + filterStr + ')');
+                    if (utils.isRegex(filterStr)) {
+                        var rex = utils.buildRegex(filterStr);
+                        return rex.test(item);
+                    } else {
+                        return item === filterStr;
+                    }
+                }
+            }, {
+                key: 'getHosts',
+                value: function getHosts(groupFilter, hostFilter) {
+                    var _this3 = this;
+
+                    //this will only work if i get all groups and then return a filtered array of groups because prtg
+                    //get groups, then return _.filter(pattern)
+                    //console.log("1: getHosts")
+                    return this.performGroupSuggestQuery().then(function (groups) {
+                        //console.log('2: getHosts: Groups result:\n' + JSON.stringify(groups,'',4));
+                        var filteredGroups = _.filter(groups, function (group) {
+                            return _this3.filterMatch(group.group, groupFilter);
+                        });
+                        //console.log('3: getHosts: filteredGroups: ' + JSON.stringify(filteredGroups,'',4));
+                        var filters = [];
+                        _.each(filteredGroups, function (group) {
+                            filters.push('filter_group=' + group.group);
+                        });
+
+                        //console.log('4: getHosts: device query filter: "' + filters.join('&'));
+                        //fuck, coudl use prtg to do filtering but it can't filter regex, so i have to get a full
+                        //list of things and then filter that and then ...ugh.
+                        //REMEMBER TO FIX THE QUERY EDITOR FUNCTIONS, TOO, YOU DOPE
+                        return _this3.performDeviceSuggestQuery("''&" + filters.join('&')).then(function (devices) {
+                            //console.log("5: getHosts: deviceQuery");
+                            return _.filter(devices, function (device) {
+                                return _this3.filterMatch(device.device, hostFilter);
+                            });
+                        });
+                    });
+                }
+            }, {
+                key: 'getSensors',
+                value: function getSensors(groupFilter, hostFilter, sensorFilter) {
+                    var _this4 = this;
+
+                    return this.getHosts(groupFilter, hostFilter).then(function (hosts) {
+                        //console.log("6: getSensors (return of getHosts)");
+                        var filters = [];
+                        _.each(hosts, function (host) {
+                            filters.push('filter_device=' + host.device);
+                        });
+                        return _this4.performSensorSuggestQuery("''&" + filters.join('&')).then(function (sensors) {
+                            //console.log('getSensors \n' + JSON.stringify(sensors,'',4));
+
+                            return _.filter(sensors, function (sensor) {
+                                return _this4.filterMatch(sensor.sensor, sensorFilter);
+                            });
+                        });
+                    });
+                }
+            }, {
+                key: 'getAllItems',
+                value: function getAllItems(groupFilter, hostFilter, sensorFilter) {
+                    var _this5 = this;
+
+                    return this.getSensors(groupFilter, hostFilter, sensorFilter).then(function (sensors) {
+
+                        //console.log('7: GetAllItems: Sensors \n' + JSON.stringify(sensors,'',4));
+                        /**
+                         * In this context, if i simply iterate an array with _.each and then execute performPRTGAPIRequest, even
+                         * though the returned object is a promise which can be used in a chain, the execution falls outside of the existing
+                         * promise chain and thus executs asynchronously. To keep everything in the same execution context, create a
+                         * promise array for each object, then execute them in context.
+                         */
+                        var promises = _.map(sensors, function (sensor) {
+                            var params = 'content=channels&columns=objid,channel,sensor,name&id=' + sensor.objid;
+                            //console.log("8: getAllItems: channel query: " + params);
+                            return _this5.performPRTGAPIRequest('table.json', params).then(function (channels) {
+                                /**
+                                 * Create an object that contains all of the information necessary to query this metric
+                                 */
+                                return Promise.all(_.map(channels, function (channel) {
+                                    channel.sensor = sensor.objid;
+                                    channel.sensor_raw = sensor.sensor;
+                                    channel.device = sensor.device;
+                                    channel.group = sensor.group;
+                                    return channel;
+                                }));
+                            });
+                        });
+                        return Promise.all(promises).then(_.flatten);
+                    });
+                }
+            }, {
+                key: 'getItems',
+                value: function getItems(groupFilter, deviceFilter, sensorFilter, channelFilter) {
+                    var _this6 = this;
+
+                    return this.getAllItems(groupFilter, deviceFilter, sensorFilter).then(function (items) {
+                        return _.filter(items, function (item) {
+                            //console.log(JSON.stringify(item,'',4));
+                            return _this6.filterMatch(item.name, channelFilter);
+                        });
+                    });
+                }
+            }, {
+                key: 'getItemsFromTarget',
+                value: function getItemsFromTarget(target) {
+                    /*
+                     * Flow: is group filter present?
+                     * yes: Get groups(filter)
+                     * no: get device
+                     */
+                    return this.getItems(target.group.name, target.device.name, target.sensor.name, target.channel.name);
+                }
+            }, {
+                key: 'getItemHistory',
+                value: function getItemHistory(sensor, channel, dateFrom, dateTo) {
+                    var hours = (dateTo - dateFrom) / 3600;
+                    var avg = 0;
+                    if (hours > 12 && hours < 36) {
+                        avg = "300";
+                    } else if (hours > 36 && hours < 745) {
+                        avg = "3600";
+                    } else if (hours > 745) {
+                        avg = "86400";
+                    }
+
+                    var method = "historicdata.xml";
+                    var params = "id=" + sensor + "&sdate=" + this.getPRTGDate(dateFrom) + "&edate=" + this.getPRTGDate(dateTo) + "&avg=" + avg + "&pctshow=false&pctmode=false";
+                    /*
+                     * Modified to read the "statusid" value, this can then be mapped via lookup table to a PRTG status type
+                     * 1=Unknown, 2=Scanning, 3=Up, 4=Warning, 5=Down, 6=No Probe, 7=Paused by User, 8=Paused by Dependency,
+                     * 9=Paused by Schedule, 10=Unusual, 11=Not Licensed, 12=Paused Until, 13=Down Acknowledged, 14=Down Partial
+                     */
+                    var result = [];
+                    if (channel == 'Status') {
+                        params = "&id=" + sensor;
+                        return this.performPRTGAPIRequest('getsensordetails.json', params).then(function (results) {
+                            var statusid = results.statusid;
+                            console.log("Status ID: " + statusid);
+                            var dt = Date.now();
+                            result.push([statusid, dt]);
+                            return result;
+                        });
+                    } else {
+                        return this.performPRTGAPIRequest(method, params).then(function (results) {
+
+                            if (!results.histdata) {
+                                return results;
+                            }
+                            var rCnt = results.histdata.item.length;
+
+                            for (var i = 0; i < rCnt; i++) {
+                                var v;
+                                var dt = Math.round((results.histdata.item[i].datetime_raw - 25569) * 86400, 0) * 1000;
+                                if (results.histdata.item[i].value_raw && results.histdata.item[i].value_raw.length > 0) {
+                                    //FIXME: better way of dealing with multiple channels of same name
+                                    //IE you select "Traffic In" but PRTG provides Volume AND Speed channels.
+                                    for (var j = 0; j < results.histdata.item[i].value_raw.length; j++) {
+                                        //workaround for SNMP Bandwidth Issue #3. Check for presence of (speed) suffix, and use that.
+                                        if (results.histdata.item[i].value_raw[j].channel.match(channel + ' [(]speed[)]') || results.histdata.item[i].value_raw[j].channel == channel) {
+                                            v = Number(results.histdata.item[i].value_raw[j].text);
+                                        }
+                                    }
+                                } else if (results.histdata.item[i].value_raw) {
+                                    v = Number(results.histdata.item[i].value_raw.text);
+                                }
+                                result.push([v, dt]);
+                            }
+                            return result;
+                        });
+                    }
+                }
+            }, {
                 key: 'getValues',
                 value: function getValues(deviceId, sensorId, channelId, dateFrom, dateTo) {
-                    var _this3 = this;
+                    var _this7 = this;
 
                     return this.getDeviceByName(deviceId).then(function (deviceObj) {
                         var device;
@@ -245,7 +423,7 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
                         } catch (e) {
                             return [];
                         }
-                        return _this3.getSensorByName(sensorId, device).then(function (sensorObj) {
+                        return _this7.getSensorByName(sensorId, device).then(function (sensorObj) {
                             var sensor = sensorObj[0].objid;
                             var hours = (dateTo - dateFrom) / 3600;
                             var avg = 0;
@@ -257,20 +435,39 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
                                 avg = "86400";
                             }
 
-                            var method = "historicdata.json";
-                            var params = "usecaption=true&id=" + sensor + "&sdate=" + _this3.getPRTGDate(dateFrom) + "&edate=" + _this3.getPRTGDate(dateTo) + "&avg=" + avg + "&pctshow=false&pctmode=false";
+                            var method = "historicdata.xml";
+                            var params = "id=" + sensor + "&sdate=" + _this7.getPRTGDate(dateFrom) + "&edate=" + _this7.getPRTGDate(dateTo) + "&avg=" + avg + "&pctshow=false&pctmode=false";
 
-                            if (channelId == '!') {
+                            /*
+                             * Modified to read the "statusid" value, this can then be mapped via lookup table to a PRTG status type
+                             * 1=Unknown, 2=Scanning, 3=Up, 4=Warning, 5=Down, 6=No Probe, 7=Paused by User, 8=Paused by Dependency,
+                             * 9=Paused by Schedule, 10=Unusual, 11=Not Licensed, 12=Paused Until, 13=Down Acknowledged, 14=Down Partial
+                             */
+                            var result = [];
+                            if (channelId == 'Status') {
                                 params = "&id=" + sensor;
-                                return _this3.performPRTGAPIRequest('getsensordetails.json', params).then(function (results) {
-                                    var message = results.lastmessage;
-                                    var timestamp = results.lastcheck.replace(/(\s\[[\d\smsago\]]+)/g, '');
-                                    var dt = Math.round((timestamp - 25569) * 86400, 0) * 1000;
-                                    return [message, dt];
+                                return _this7.performPRTGAPIRequest('getsensordetails.json', params).then(function (results) {
+                                    var statusid = results.statusid;
+                                    console.log("Status ID: " + statusid);
+                                    //var timestamp = results.lastcheck.replace(/(\s.*)/g,''); 
+                                    //var dt = Math.round((timestamp - 25569) * 86400,0) * 1000;
+                                    var dt = Date.now();
+                                    //console.log("now: " + now);
+                                    //var intervals = Math.round((now - dt) / 60000,0);
+                                    //console.log ("Seconds: " + intervals);
+                                    //var tmpdt;
+                                    //for (var i=0;i<intervals;i++) {
+                                    //    tmpdt = dt + (i *60000);
+                                    result.push([statusid, dt]);
+                                    //Console.log("Add " + statusid + ", " + tmpdt);
+                                    //}
+                                    //var dt = Date.now - (60 * 1000);  
+                                    //console.log("Timestamp: " + dt);
+                                    return result;
                                 });
                             } else {
-                                return _this3.performPRTGAPIRequest(method, params).then(function (results) {
-                                    var result = [];
+                                return _this7.performPRTGAPIRequest(method, params).then(function (results) {
+
                                     if (!results.histdata) {
                                         return results;
                                     }
@@ -334,6 +531,8 @@ System.register(['angular', 'lodash', './xmlparser'], function (_export, _contex
             angular = _angular.default;
         }, function (_lodash) {
             _ = _lodash.default;
+        }, function (_utils) {
+            utils = _utils;
         }, function (_xmlparser) {
             XMLXform = _xmlparser.XMLXform;
         }],

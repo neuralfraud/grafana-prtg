@@ -4,6 +4,7 @@
   "id": "jasonlashua-prtg-datasource",
 
   "metrics": true,
+  "alerting":true,
   "annotations": true,
   
   "info": {

@@ -8,18 +8,26 @@
 			ng-blur="ctrl.selectGroup()"
 			data-min-length=0
 			data-items=100
-			class="gf-form-input">
+			class="gf-form-input"
+	        ng-class="{
+		        'filter-variable': ctrl.isVariable(ctrl.target.group.name),
+			    'filter-regex': ctrl.isRegex(ctrl.target.group.name)
+			}">
 			</input>
 		</div>
 		<div class="gf-form max-width-40">
-		<label class="gf-form-label query-keyword width-7">Host</label>
-		<input type="text"
-		ng-model="ctrl.target.device.name"
-		bs-typeahead="ctrl.getDeviceNames"
-		ng-blur="ctrl.selectDevice()"
-		data-min-length=0
-		data-items=100
-		class="gf-form-input">
+			<label class="gf-form-label query-keyword width-7">Host</label>
+			<input type="text"
+			ng-model="ctrl.target.device.name"
+			bs-typeahead="ctrl.getDeviceNames"
+			ng-blur="ctrl.selectDevice()"
+			data-min-length=0
+			data-items=100
+			class="gf-form-input"
+	        ng-class="{
+	        'filter-variable': ctrl.isVariable(ctrl.target.device.name),
+	        'filter-regex': ctrl.isRegex(ctrl.target.device.name)
+	        }">
 		</input>
 	</div>
 	<div class="gf-form gf-form--grow">
@@ -35,7 +43,11 @@
 			ng-blur="ctrl.selectSensor()"
 			data-min-length=0
 			data-items=100
-			class="gf-form-input">
+			class="gf-form-input"
+	        ng-class="{
+	        'filter-variable': ctrl.isVariable(ctrl.target.sensor.name),
+	        'filter-regex': ctrl.isRegex(ctrl.target.sensor.name)
+	        }">
 			</input>
 		</div>
 		<div class="gf-form max-width-40">
@@ -46,10 +58,28 @@
 			ng-blur="ctrl.selectChannel()"
 			data-min-length=0
 			data-items=100
-			class="gf-form-input">
+			class="gf-form-input"
+	        ng-class="{
+	        'filter-variable': ctrl.isVariable(ctrl.target.channel.name),
+	        'filter-regex': ctrl.isRegex(ctrl.target.channel.name)
+	        }">
 			</input>
 		</div>
 		<div class="gf-form gf-form--grow">
+			<div class="gf-form-label gf-form-label--grow"></div>
+		</div>
+	</div>
+
+
+	<!-- Metric processing functions -->
+	<div class="gf-form-inline" ng-hide="ctrl.target.mode">
+		<div class="gf-form">
+			<label class="gf-form-label query-keyword width-7">Functions</label>
+			<div ng-repeat="func in ctrl.target.functions" class="gf-form-label query-part" metric-function-editor></div>
+			</div>
+			<div class="gf-form dropdown" add-metric-function>
+			</div>
+			<div class="gf-form gf-form--grow">
 			<div class="gf-form-label gf-form-label--grow"></div>
 		</div>
 	</div>

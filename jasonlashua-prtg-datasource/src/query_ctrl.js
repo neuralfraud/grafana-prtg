@@ -8,11 +8,23 @@
 
 import {QueryCtrl} from 'app/plugins/sdk';
 import _ from 'lodash';
+import * as utils from './utils';
+import './css/query-editor.css!';
+
+//zabbix style function editor, create angular directives to provide flyout menu to select functions
+//import './add-metric-function.directive';
+//import './metric-function-editor.directive';
 
 export class PRTGQueryController extends QueryCtrl {
 
-  constructor($scope, $injector, $sce, $q, templateSrv) {
+  constructor($scope, $injector, $rootScope, $sce, templateSrv) {
     super($scope, $injector);
+    $scope.$on('typeahead-updated', () => {
+      this.targetChange();
+    });
+    
+    $rootScope.$on('template-variable-value-updated', () => this.variableChanged());
+    
     this.init = function() {
       var target = this.target;
       this.templateSrv = templateSrv;
@@ -43,7 +55,7 @@ export class PRTGQueryController extends QueryCtrl {
   * Alias is comprised of the device name, sensor and channel, e.g., FILESERV1: DNS Response Time.
   */
   setTargetAlias() {
-    this.target.alias = this.target.device.name + ": " + this.target.sensor.name + " " + this.target.channel.name;
+    //this.target.alias = this.target.channel.name);
   }
   
   // take action on target update and refresh the model? whatever the hell angular actually does is beyond me... 
@@ -53,6 +65,15 @@ export class PRTGQueryController extends QueryCtrl {
       this.oldTarget = newTarget;
       this.panelCtrl.refresh();
     }
+  }
+  
+  variableChanged() {
+    
+    _.some(['group','device','sensor'], item => {
+        if(this.target[item].name.indexOf('$') > 0) {
+            this.targetChange();
+          } 
+      });
   }
 
   /*
@@ -102,7 +123,8 @@ export class PRTGQueryController extends QueryCtrl {
       group = this.target.group.name || undefined;
       group = this.templateSrv.replace(group);
     }
-    this.datasource.prtgAPI.performDeviceSuggestQuery(group).then(devices => {
+    this.datasource.prtgAPI.getHosts(group, '/.*/').then(devices => {
+//this.datasource.prtgAPI.performDeviceSuggestQuery(group).then(devices => {
       _.map(devices, device => {
         this.metric.deviceList.push({name: device.device, visible_name: device.device});
       });
@@ -126,7 +148,7 @@ export class PRTGQueryController extends QueryCtrl {
 
   updateChannelList() {
     var sensor, device;
-    this.metric.channelList = [{name: '*', visible_name: 'All'},{name: '!', visible_name: 'Last Message'}];
+    this.metric.channelList = [{name: 'status', visible_name: 'Last Message'},{name: 'messages', visible_name: 'Messages'}];
     this.addTemplatedVariables(this.metric.channelList);
     if (this.target.sensor) {
       sensor = this.target.sensor.name;
@@ -162,6 +184,14 @@ export class PRTGQueryController extends QueryCtrl {
     }
     return errs;
   }
+  
+  isRegex(str) {
+    return utils.isRegex(str);
+  }
+
+  isVariable(str) {
+    return utils.isTemplateVariable(str);
+  }  
 }
 
 // Set templateUrl as static property

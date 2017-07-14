@@ -57,27 +57,49 @@ class PRTGDataSource {
         query(options) {
             var from = Math.ceil(dateMath.parse(options.range.from) / 1000);
             var to = Math.ceil(dateMath.parse(options.range.to) / 1000);
-            var promises = _.map(options.targets, target => {
+            
+            var promises = _.map(options.targets, t => {
+                var target = _.cloneDeep(t);    
                 if (target.hide || !target.group || !target.device || !target.channel || !target.sensor) {
                     return [];
                 }
                 
                 var device, group, sensor, channel = "";
-                group = this.templateSrv.replace(target.group.name);
-                device   = this.templateSrv.replace(target.device.name);
-                sensor   = this.templateSrv.replace(target.sensor.name);
-                channel  = this.templateSrv.replace(target.channel.name);
+                group    = this.templateSrv.replace(target.group.name, options.scopedVars);
+                device   = this.templateSrv.replace(target.device.name, options.scopedVars);
+                sensor   = this.templateSrv.replace(target.sensor.name, options.scopedVars);
+                channel  = this.templateSrv.replace(target.channel.name, options.scopedVars);
+                if (group === '*') { group = "/.*/";}
+                if (device === '*') { device = "/.*/";}
+                if (sensor === '*') { sensor = "/.*/";}
+                if (channel === '*') { channel = "/.*/";}
+                //oh isn't that just crappy? works for now!
 
-                return this.prtgAPI.getValues(device, sensor, channel, from, to)
-                    .then(values => {                
-                        var timeseries = {target:target.alias, datapoints: values};
-                        return timeseries;
+                return this.prtgAPI.getItemsFromTarget(target)
+                    .then(items => {
+                        console.log('query: Got all items\n' + JSON.stringify(items,'',4));
+                        var promises = _.map(items, item => {
+                            return this.prtgAPI.getItemHistory(item.sensor, item.name, from, to).then(values => {
+                                var alias = item.name;
+                                var timeseries = {target:alias, datapoints: values};
+                                return timeseries;
+                            });
+                        });
+                        return Promise.all(promises).then(_.flatten);
                     });
+/*                        return this.prtgAPI.getValues(items, from, to)
+                            .then(values => {                
+                                var timeseries = {target:target.alias, datapoints: values};
+                                return timeseries;
+                            });
+                    });*/
+
             });
             
             return Promise.all(_.flatten(promises))
                 .then(results => {
-                    return {data: results};
+                   // console.log("data: " + JSON.stringify(_.flatten(results),'',4));
+                    return {data: _.flatten(results)};
                 });
         }
         
@@ -104,23 +126,34 @@ class PRTGDataSource {
          * group:* or name
          */
         metricFindQuery (query) {
-            if (!query.match(/(channel|sensor|device|group):(\*)|(tags|sensor|device|group)=([\$\sa-zA-Z0-9-_]+)/i)) {
-                return Promise.reject("Syntax Error: Expected pattern matching /(sensors|devices|groups):(\*)|(tags|device|group)=([a-zA-Z0-9]+)/i");
-            }
+            //if (!query.match(/(channel|sensor|device|group):(\*)|(tags|sensor|device|group)=([\$\sa-zA-Z0-9-_]+)/i)) {
+            //    return Promise.reject("Syntax Error: Expected pattern matching /(sensors|devices|groups):(\*)|(tags|device|group)=([a-zA-Z0-9]+)/i");
+           // }
+        
+            // sensor:device=$server
+            // item   type   value
+            
+            //group.host.sensor.channel
+            //*.$host.
+            console.log("Metricfindquery: " + query);
             var params = "";
             var a = query.split(':');
+            var b;
+            if (a[1] !== '*') {
+                b = a[1].split('=');
+            }
             if (a[0] == "channel") {
-                var b = a[1].split('=');
-                params = "&content=channels&columns=name&id=" + b[1];
-                a[0]="name";
+                params = "&content=channels&columns=name&id=" + this.templateSrv.replace(b[1]);
+                //a[0]="name";
             } else {
-                params="&content=" + a[0] + "s";
+                params="&content=" + a[0] + "s&count=9999";
                 if (a[1] !== '*') {
                     params = params + "&filter_" + this.templateSrv.replace(a[1]);
                 }
             }
             return this.prtgAPI.performPRTGAPIRequest('table.json', params)
                 .then(results => {
+                    
                     return _.map(results, res => {
                         return {text: res[a[0]], expandable:0};
                     }, this);
