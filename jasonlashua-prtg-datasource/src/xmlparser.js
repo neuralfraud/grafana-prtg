@@ -147,5 +147,6 @@ export class XMLXform {
             json = xsltProcessor2.transformToFragment(newxml, document).textContent;
         return JSON.parse(json);
     }
+
 }
 
