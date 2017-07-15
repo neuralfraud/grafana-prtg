@@ -30,8 +30,8 @@ Also I do not ignore the issues - I really only get a few days every few months 
 **THANK YOU FOR USING THIS PLUGIN!**
 
 
-#IMPORTANT INFORMATION AS OF 2/18/2017
-You must reconfigure your datasource and use the passhash for your PRTG api user account. The plugin no longer uses the password!
+# IMPORTANT INFORMATION AS OF 2/18/2017
+You must reconfigure your datasource and **use the passhash** for your PRTG api user account. The plugin no longer uses the password!
 
 ![Grafana](https://neuralfraud.github.io/grafana.png)
 
