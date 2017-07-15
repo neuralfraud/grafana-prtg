@@ -20,7 +20,7 @@
     "links": [
       {"name": "GitHub", "url": "https://github.com/neuralfraud/grafana-prtg"}
     ],
-    "version": "3.1.0",
-    "updated": "2017-02-18"
+    "version": "4.0.0",
+    "updated": "2017-07-14"
   }
 }

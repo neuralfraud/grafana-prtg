@@ -83,7 +83,6 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                 value: function getPRTGDate(unixtime) {
                     var d = new Date(unixtime * 1000);
                     var s = [d.getFullYear(), this.pad(d.getMonth(), true), this.pad(d.getDate()), this.pad(d.getHours()), this.pad(d.getMinutes()), this.pad(d.getSeconds())];
-                    //console.log("date string: " + s.join("-"));
                     return s.join("-");
                 }
             }, {
@@ -124,7 +123,7 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                                 //All else is XML from table.xml so throw it into the transformer and get JSON back.
                                 if (response.data == "Not enough monitoring data") {
                                     //Fixes Issue #5 - reject the promise with a message. The message is displayed instead of an uncaught exception.
-                                    return Promise.reject({ message: "<p style=\"font-size: 150%; font-weight: bold\">Not enough monitoring data.</p><p>Request:<br> &quot;" + params + "&quot;</p>" });
+                                    return Promise.reject({ message: "Not enough monitoring data.\n\nRequest:\n" + params + "\n" });
                                 }
                                 return new XMLXform(method, response.data);
                             }
@@ -238,7 +237,6 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
             }, {
                 key: 'filterMatch',
                 value: function filterMatch(item, filterStr) {
-                    //console.log('FilterMatch(' + item + ', ' + filterStr + ')');
                     if (utils.isRegex(filterStr)) {
                         var rex = utils.buildRegex(filterStr);
                         return rex.test(item);
@@ -251,11 +249,7 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                 value: function getHosts(groupFilter, hostFilter) {
                     var _this3 = this;
 
-                    //this will only work if i get all groups and then return a filtered array of groups because prtg
-                    //get groups, then return _.filter(pattern)
-                    //console.log("1: getHosts")
                     return this.performGroupSuggestQuery().then(function (groups) {
-                        //console.log('2: getHosts: Groups result:\n' + JSON.stringify(groups,'',4));
                         var filteredGroups = _.filter(groups, function (group) {
                             return _this3.filterMatch(group.group, groupFilter);
                         });
@@ -265,12 +259,7 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                             filters.push('filter_group=' + group.group);
                         });
 
-                        //console.log('4: getHosts: device query filter: "' + filters.join('&'));
-                        //fuck, coudl use prtg to do filtering but it can't filter regex, so i have to get a full
-                        //list of things and then filter that and then ...ugh.
-                        //REMEMBER TO FIX THE QUERY EDITOR FUNCTIONS, TOO, YOU DOPE
                         return _this3.performDeviceSuggestQuery("''&" + filters.join('&')).then(function (devices) {
-                            //console.log("5: getHosts: deviceQuery");
                             return _.filter(devices, function (device) {
                                 return _this3.filterMatch(device.device, hostFilter);
                             });
@@ -283,14 +272,11 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                     var _this4 = this;
 
                     return this.getHosts(groupFilter, hostFilter).then(function (hosts) {
-                        //console.log("6: getSensors (return of getHosts)");
                         var filters = [];
                         _.each(hosts, function (host) {
                             filters.push('filter_device=' + host.device);
                         });
                         return _this4.performSensorSuggestQuery("''&" + filters.join('&')).then(function (sensors) {
-                            //console.log('getSensors \n' + JSON.stringify(sensors,'',4));
-
                             return _.filter(sensors, function (sensor) {
                                 return _this4.filterMatch(sensor.sensor, sensorFilter);
                             });
@@ -304,7 +290,6 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
 
                     return this.getSensors(groupFilter, hostFilter, sensorFilter).then(function (sensors) {
 
-                        //console.log('7: GetAllItems: Sensors \n' + JSON.stringify(sensors,'',4));
                         /**
                          * In this context, if i simply iterate an array with _.each and then execute performPRTGAPIRequest, even
                          * though the returned object is a promise which can be used in a chain, the execution falls outside of the existing
@@ -313,7 +298,6 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                          */
                         var promises = _.map(sensors, function (sensor) {
                             var params = 'content=channels&columns=objid,channel,sensor,name&id=' + sensor.objid;
-                            //console.log("8: getAllItems: channel query: " + params);
                             return _this5.performPRTGAPIRequest('table.json', params).then(function (channels) {
                                 /**
                                  * Create an object that contains all of the information necessary to query this metric
@@ -337,7 +321,6 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
 
                     return this.getAllItems(groupFilter, deviceFilter, sensorFilter).then(function (items) {
                         return _.filter(items, function (item) {
-                            //console.log(JSON.stringify(item,'',4));
                             return _this6.filterMatch(item.name, channelFilter);
                         });
                     });
@@ -392,7 +375,9 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
 
                             for (var i = 0; i < rCnt; i++) {
                                 var v;
-                                var dt = Math.round((results.histdata.item[i].datetime_raw - 25569) * 86400, 0) * 1000;
+                                var prtgDate = results.histdata.item[i].datetime_raw;
+                                var dt = new Date((prtgDate - 25569) * 86400 * 1000);
+                                //var dt = Math.round((results.histdata.item[i].datetime_raw - 25568) * 86400,0) * 1000;
                                 if (results.histdata.item[i].value_raw && results.histdata.item[i].value_raw.length > 0) {
                                     //FIXME: better way of dealing with multiple channels of same name
                                     //IE you select "Traffic In" but PRTG provides Volume AND Speed channels.
@@ -410,91 +395,6 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                             return result;
                         });
                     }
-                }
-            }, {
-                key: 'getValues',
-                value: function getValues(deviceId, sensorId, channelId, dateFrom, dateTo) {
-                    var _this7 = this;
-
-                    return this.getDeviceByName(deviceId).then(function (deviceObj) {
-                        var device;
-                        try {
-                            device = deviceObj[0].objid;
-                        } catch (e) {
-                            return [];
-                        }
-                        return _this7.getSensorByName(sensorId, device).then(function (sensorObj) {
-                            var sensor = sensorObj[0].objid;
-                            var hours = (dateTo - dateFrom) / 3600;
-                            var avg = 0;
-                            if (hours > 12 && hours < 36) {
-                                avg = "300";
-                            } else if (hours > 36 && hours < 745) {
-                                avg = "3600";
-                            } else if (hours > 745) {
-                                avg = "86400";
-                            }
-
-                            var method = "historicdata.xml";
-                            var params = "id=" + sensor + "&sdate=" + _this7.getPRTGDate(dateFrom) + "&edate=" + _this7.getPRTGDate(dateTo) + "&avg=" + avg + "&pctshow=false&pctmode=false";
-
-                            /*
-                             * Modified to read the "statusid" value, this can then be mapped via lookup table to a PRTG status type
-                             * 1=Unknown, 2=Scanning, 3=Up, 4=Warning, 5=Down, 6=No Probe, 7=Paused by User, 8=Paused by Dependency,
-                             * 9=Paused by Schedule, 10=Unusual, 11=Not Licensed, 12=Paused Until, 13=Down Acknowledged, 14=Down Partial
-                             */
-                            var result = [];
-                            if (channelId == 'Status') {
-                                params = "&id=" + sensor;
-                                return _this7.performPRTGAPIRequest('getsensordetails.json', params).then(function (results) {
-                                    var statusid = results.statusid;
-                                    console.log("Status ID: " + statusid);
-                                    //var timestamp = results.lastcheck.replace(/(\s.*)/g,''); 
-                                    //var dt = Math.round((timestamp - 25569) * 86400,0) * 1000;
-                                    var dt = Date.now();
-                                    //console.log("now: " + now);
-                                    //var intervals = Math.round((now - dt) / 60000,0);
-                                    //console.log ("Seconds: " + intervals);
-                                    //var tmpdt;
-                                    //for (var i=0;i<intervals;i++) {
-                                    //    tmpdt = dt + (i *60000);
-                                    result.push([statusid, dt]);
-                                    //Console.log("Add " + statusid + ", " + tmpdt);
-                                    //}
-                                    //var dt = Date.now - (60 * 1000);  
-                                    //console.log("Timestamp: " + dt);
-                                    return result;
-                                });
-                            } else {
-                                return _this7.performPRTGAPIRequest(method, params).then(function (results) {
-
-                                    if (!results.histdata) {
-                                        return results;
-                                    }
-                                    var rCnt = results.histdata.item.length;
-
-                                    for (var i = 0; i < rCnt; i++) {
-                                        var v;
-                                        var dt = Math.round((results.histdata.item[i].datetime_raw - 25569) * 86400, 0) * 1000;
-                                        if (results.histdata.item[i].value_raw && results.histdata.item[i].value_raw.length > 0) {
-                                            //FIXME: better way of dealing with multiple channels of same name
-                                            //IE you select "Traffic In" but PRTG provides Volume AND Speed channels.
-                                            for (var j = 0; j < results.histdata.item[i].value_raw.length; j++) {
-                                                //workaround for SNMP Bandwidth Issue #3. Check for presence of (speed) suffix, and use that.
-                                                if (results.histdata.item[i].value_raw[j].channel.match(channelId + ' [(]speed[)]') || results.histdata.item[i].value_raw[j].channel == channelId) {
-                                                    v = Number(results.histdata.item[i].value_raw[j].text);
-                                                }
-                                            }
-                                        } else if (results.histdata.item[i].value_raw) {
-                                            v = Number(results.histdata.item[i].value_raw.text);
-                                        }
-                                        result.push([v, dt]);
-                                    }
-                                    return result;
-                                });
-                            }
-                        });
-                    });
                 }
             }, {
                 key: 'getMessages',

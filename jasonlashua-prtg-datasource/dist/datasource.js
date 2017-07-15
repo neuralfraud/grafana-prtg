@@ -123,26 +123,23 @@ System.register(['lodash', 'app/core/utils/datemath', './PRTGAPIService'], funct
                             //oh isn't that just crappy? works for now!
 
                             return _this2.prtgAPI.getItemsFromTarget(target).then(function (items) {
-                                console.log('query: Got all items\n' + JSON.stringify(items, '', 4));
-                                var promises = _.map(items, function (item) {
+                                var devices = _.uniq(_.map(items, 'device'));
+                                console.log('devices: ' + JSON.stringify(devices, '', 4));
+                                var promise = _.map(items, function (item) {
                                     return _this2.prtgAPI.getItemHistory(item.sensor, item.name, from, to).then(function (values) {
                                         var alias = item.name;
+                                        if (_.keys(devices).length > 1) {
+                                            alias = item.device + ': ' + alias;
+                                        }
                                         var timeseries = { target: alias, datapoints: values };
                                         return timeseries;
                                     });
                                 });
-                                return Promise.all(promises).then(_.flatten);
+                                return Promise.all(promise).then(_.flatten);
                             });
-                            /*                        return this.prtgAPI.getValues(items, from, to)
-                                                        .then(values => {                
-                                                            var timeseries = {target:target.alias, datapoints: values};
-                                                            return timeseries;
-                                                        });
-                                                });*/
                         });
 
                         return Promise.all(_.flatten(promises)).then(function (results) {
-                            // console.log("data: " + JSON.stringify(_.flatten(results),'',4));
                             return { data: _.flatten(results) };
                         });
                     }

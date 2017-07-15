@@ -51,13 +51,7 @@ export class PRTGQueryController extends QueryCtrl {
     this.init();
   }
   
-  /**
-  * Alias is comprised of the device name, sensor and channel, e.g., FILESERV1: DNS Response Time.
-  */
-  setTargetAlias() {
-    //this.target.alias = this.target.channel.name);
-  }
-  
+ 
   // take action on target update and refresh the model? whatever the hell angular actually does is beyond me... 
   targetChange() {
     var newTarget = _.cloneDeep(this.target);

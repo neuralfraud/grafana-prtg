@@ -109,20 +109,10 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
           return _this;
         }
 
-        /**
-        * Alias is comprised of the device name, sensor and channel, e.g., FILESERV1: DNS Response Time.
-        */
+        // take action on target update and refresh the model? whatever the hell angular actually does is beyond me... 
 
 
         _createClass(PRTGQueryController, [{
-          key: 'setTargetAlias',
-          value: function setTargetAlias() {}
-          //this.target.alias = this.target.channel.name);
-
-
-          // take action on target update and refresh the model? whatever the hell angular actually does is beyond me... 
-
-        }, {
           key: 'targetChange',
           value: function targetChange() {
             var newTarget = _.cloneDeep(this.target);

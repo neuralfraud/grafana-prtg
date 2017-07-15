@@ -77,28 +77,24 @@ class PRTGDataSource {
 
                 return this.prtgAPI.getItemsFromTarget(target)
                     .then(items => {
-                        console.log('query: Got all items\n' + JSON.stringify(items,'',4));
-                        var promises = _.map(items, item => {
+                        var devices = _.uniq(_.map(items, 'device'));
+                        console.log('devices: ' + JSON.stringify(devices,'',4));
+                         var promise = _.map(items, item => {
                             return this.prtgAPI.getItemHistory(item.sensor, item.name, from, to).then(values => {
                                 var alias = item.name;
+                                if (_.keys(devices).length > 1) {
+                                    alias = item.device + ': ' + alias;
+                                }
                                 var timeseries = {target:alias, datapoints: values};
                                 return timeseries;
                             });
                         });
-                        return Promise.all(promises).then(_.flatten);
+                        return Promise.all(promise).then(_.flatten);
                     });
-/*                        return this.prtgAPI.getValues(items, from, to)
-                            .then(values => {                
-                                var timeseries = {target:target.alias, datapoints: values};
-                                return timeseries;
-                            });
-                    });*/
-
             });
             
             return Promise.all(_.flatten(promises))
                 .then(results => {
-                   // console.log("data: " + JSON.stringify(_.flatten(results),'',4));
                     return {data: _.flatten(results)};
                 });
         }
