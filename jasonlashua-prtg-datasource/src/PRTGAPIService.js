@@ -70,8 +70,8 @@ function PRTGAPIService(alertSrv, backendSrv) {
             var hash = 0;
             if (str.length === 0) return hash;
             for (var i = 0; i < str.length; i++) {
-                var char = str.charCodeAt(i);
-                hash = ((hash<<5)-hash)+char;
+                var chr = str.charCodeAt(i);
+                hash = ((hash<<5)-hash)+chr;
                 hash = hash & hash; // Convert to 32bit integer
             }
             return hash;
@@ -261,7 +261,7 @@ function PRTGAPIService(alertSrv, backendSrv) {
          *  For Templating: Retrieve Sensor ObjId by it's name and parent device ObjId
          */
         getSensorByName(name, device)    {
-            var params = 'content=sensors&columns=objid,device,sensor&id=' + device;
+            var params = 'content=sensors&columns=objid,device,sensor&filter_device=' + device;
             if (name !== '*') {
                 params += '&filter_sensor=' + name;
             }   
@@ -279,45 +279,84 @@ function PRTGAPIService(alertSrv, backendSrv) {
             }
             return this.performPRTGAPIRequest('table.json', params);
         }
+
+        filterQuery(items, queryStr) {
+            var filterItems = [];
+            if (queryStr.match(/{[^{}]+}/g)) {
+                filterItems = _.trim(queryStr, '{}').split(',');
+            } else {
+                filterItems.push(queryStr);
+            }
+            //console.log("filterQuery: Find item\n" + JSON.stringify(items,'',4) + "\n\nfilterQuery: Find in array: " + JSON.stringify(filterItems,'',4));
+            return _.filter(items, item => {
+                
+                var findItem;
+                if (item.group && !item.device) {
+                    //console.log("find in obj.group");
+                    findItem = item.group;
+                } else if (item.device && !item.sensor) {
+                    //console.log("find in obj.device");
+                    findItem = item.device;
+                } else if (item.sensor) {
+                   //console.log("find in obj.sensor");
+                    findItem = item.sensor;
+                } else if (item.channel) {
+                    findItem = item.name;
+                } else {
+                    //console.log("find ? no usable keys! " + JSON.stringify(item,'',4));
+                    return false;
+                }
+                if (utils.isRegex(queryStr)) {
+                    var rex = utils.buildRegex(queryStr);
+                    return rex.test(findItem);
+                }
+                if (filterItems.length === 0) {
+                    return true;
+                }
+                return filterItems.includes(findItem);
+            });
+        }
+            
         
-        filterMatch(item, filterStr) {
+        filterMatch(findItem, filterStr) {
+           //console.log('filterMatch: ' + JSON.stringify(findItem,'',4) + ', ' + filterStr);
+
             if(utils.isRegex(filterStr)) {
                 var rex = utils.buildRegex(filterStr);
-                return rex.test(item);
+                return rex.test(findItem);
             } else {
-                return (item === filterStr);
+                return (findItem === filterStr);
             }
         }
         
         getHosts(groupFilter, hostFilter) {
+           ////console.log('PRTGAPIService: 328: getHosts(' + groupFilter + ', ' + hostFilter +')');
             return this.performGroupSuggestQuery().then(groups => {
-                var filteredGroups = _.filter(groups, group => {
-                    return this.filterMatch(group.group, groupFilter);
-                });
+                var filteredGroups = this.filterQuery(groups, groupFilter);
                 //console.log('3: getHosts: filteredGroups: ' + JSON.stringify(filteredGroups,'',4));
                 var filters = []; 
                 _.each(filteredGroups, group => {
                     filters.push('filter_group=' + group.group);
                 });
                
-                return this.performDeviceSuggestQuery("''&" + filters.join('&')).then(devices => {
-                    return _.filter(devices, device => {
-                        return this.filterMatch(device.device, hostFilter);
-                    });
+                return this.performDeviceSuggestQuery("&" + filters.join('&')).then(devices => {
+                  // //console.log("filterquery(devices, " + hostFilter + ")");
+                    
+                    return this.filterQuery(devices, hostFilter);
                 });
             });
         }
         
         getSensors (groupFilter, hostFilter, sensorFilter) {
             return this.getHosts(groupFilter, hostFilter).then(hosts => {
+                //console.log("Got hosts: " + JSON.stringify(hosts, '', 4));
                 var filters = [];
                 _.each(hosts, host => {
+                    //console.log("getSensors: add filter element: " + host.device);
                     filters.push('filter_device=' + host.device);
                 });
-                return this.performSensorSuggestQuery("''&" + filters.join('&')).then(sensors => {
-                    return _.filter(sensors, sensor => {
-                        return this.filterMatch(sensor.sensor, sensorFilter);
-                    });
+                return this.performSensorSuggestQuery("&" + filters.join('&')).then(sensors => {
+                    return this.filterQuery(sensors, sensorFilter);
                 });
             });
         }
@@ -353,6 +392,7 @@ function PRTGAPIService(alertSrv, backendSrv) {
     
         getItems(groupFilter, deviceFilter, sensorFilter, channelFilter) {
             return this.getAllItems(groupFilter, deviceFilter, sensorFilter).then(items => {
+                //return this.filterQuery(items, channelFilter);
                 return _.filter(items, item => {
                     return this.filterMatch(item.name, channelFilter);
                 });
@@ -394,7 +434,7 @@ function PRTGAPIService(alertSrv, backendSrv) {
                 params = "&id=" + sensor;
                 return this.performPRTGAPIRequest('getsensordetails.json', params).then(results => {
                     var statusid = results.statusid;
-                    console.log("Status ID: " + statusid);  
+                   filter("Status ID: " + statusid);  
                     var dt = Date.now();
                     result.push([statusid, dt]);
                     return result;

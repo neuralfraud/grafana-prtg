@@ -78,7 +78,7 @@ System.register(['lodash', 'app/core/utils/datemath', './PRTGAPIService'], funct
                                 };
                             });
                         }, function (error) {
-                            console.log(JSON.stringify(error, null, 4));
+                            //console.log(JSON.stringify(error,null,4));
                             return {
                                 status: "error",
                                 title: error.status + ": " + error.statusText,
@@ -100,31 +100,28 @@ System.register(['lodash', 'app/core/utils/datemath', './PRTGAPIService'], funct
                                 return [];
                             }
 
-                            var device,
-                                group,
-                                sensor,
-                                channel = "";
-                            group = _this2.templateSrv.replace(target.group.name, options.scopedVars);
-                            device = _this2.templateSrv.replace(target.device.name, options.scopedVars);
-                            sensor = _this2.templateSrv.replace(target.sensor.name, options.scopedVars);
-                            channel = _this2.templateSrv.replace(target.channel.name, options.scopedVars);
-                            if (group === '*') {
-                                group = "/.*/";
+                            target.group.name = _this2.templateSrv.replace(target.group.name, options.scopedVars);
+                            target.device.name = _this2.templateSrv.replace(target.device.name, options.scopedVars);
+                            target.sensor.name = _this2.templateSrv.replace(target.sensor.name, options.scopedVars);
+                            target.channel.name = _this2.templateSrv.replace(target.channel.name, options.scopedVars);
+                            if (target.group.name == '*') {
+                                target.group.name = "/.*/";
                             }
-                            if (device === '*') {
-                                device = "/.*/";
+                            if (target.device.name == '*') {
+                                target.device.name = "/.*/";
                             }
-                            if (sensor === '*') {
-                                sensor = "/.*/";
+                            if (target.sensor.name == '*') {
+                                target.sensor.name = "/.*/";
                             }
-                            if (channel === '*') {
-                                channel = "/.*/";
+                            if (target.channel.name == '*') {
+                                target.channel.name = "/.*/";
                             }
                             //oh isn't that just crappy? works for now!
-
+                            //console.log('target: ' + JSON.stringify(target,'',4));
                             return _this2.prtgAPI.getItemsFromTarget(target).then(function (items) {
+                                //console.log('query: items: ' + JSON.stringify(items,'',4));
                                 var devices = _.uniq(_.map(items, 'device'));
-                                console.log('devices: ' + JSON.stringify(devices, '', 4));
+                                //console.log('devices: ' + JSON.stringify(items,'',4));
                                 var promise = _.map(items, function (item) {
                                     return _this2.prtgAPI.getItemHistory(item.sensor, item.name, from, to).then(function (values) {
                                         var alias = item.name;
@@ -171,7 +168,7 @@ System.register(['lodash', 'app/core/utils/datemath', './PRTGAPIService'], funct
 
                         //group.host.sensor.channel
                         //*.$host.
-                        console.log("Metricfindquery: " + query);
+                        //console.log("Metricfindquery: " + query);
                         var params = "";
                         var a = query.split(':');
                         var b;

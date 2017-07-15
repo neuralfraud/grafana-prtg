@@ -37,7 +37,7 @@ class PRTGDataSource {
                         };
                 });
             }, error => {
-                console.log(JSON.stringify(error,null,4));
+               //console.log(JSON.stringify(error,null,4));
                 return {
                     status: "error",
                     title: error.status + ": " + error.statusText,
@@ -64,21 +64,22 @@ class PRTGDataSource {
                     return [];
                 }
                 
-                var device, group, sensor, channel = "";
-                group    = this.templateSrv.replace(target.group.name, options.scopedVars);
-                device   = this.templateSrv.replace(target.device.name, options.scopedVars);
-                sensor   = this.templateSrv.replace(target.sensor.name, options.scopedVars);
-                channel  = this.templateSrv.replace(target.channel.name, options.scopedVars);
-                if (group === '*') { group = "/.*/";}
-                if (device === '*') { device = "/.*/";}
-                if (sensor === '*') { sensor = "/.*/";}
-                if (channel === '*') { channel = "/.*/";}
+               
+                target.group.name    = this.templateSrv.replace(target.group.name, options.scopedVars);
+                target.device.name   = this.templateSrv.replace(target.device.name, options.scopedVars);
+                target.sensor.name  = this.templateSrv.replace(target.sensor.name, options.scopedVars);
+                target.channel.name = this.templateSrv.replace(target.channel.name, options.scopedVars);
+                if (target.group.name == '*') { target.group.name = "/.*/";}
+                if (target.device.name == '*') { target.device.name = "/.*/";}
+                if (target.sensor.name == '*') { target.sensor.name = "/.*/";}
+                if (target.channel.name == '*') { target.channel.name = "/.*/";}
                 //oh isn't that just crappy? works for now!
-
+                //console.log('target: ' + JSON.stringify(target,'',4));
                 return this.prtgAPI.getItemsFromTarget(target)
                     .then(items => {
+                       //console.log('query: items: ' + JSON.stringify(items,'',4));
                         var devices = _.uniq(_.map(items, 'device'));
-                        console.log('devices: ' + JSON.stringify(devices,'',4));
+                        //console.log('devices: ' + JSON.stringify(items,'',4));
                          var promise = _.map(items, item => {
                             return this.prtgAPI.getItemHistory(item.sensor, item.name, from, to).then(values => {
                                 var alias = item.name;
@@ -131,7 +132,7 @@ class PRTGDataSource {
             
             //group.host.sensor.channel
             //*.$host.
-            console.log("Metricfindquery: " + query);
+           //console.log("Metricfindquery: " + query);
             var params = "";
             var a = query.split(':');
             var b;

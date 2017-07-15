@@ -1,7 +1,7 @@
 /**
  * Grafana Datasource Plugin for PRTG API Interface (ALPHA)
  * Query Control Interface
- * 20170218 Jason Lashua
+ * 20170715 Jason Lashua
  *
  * Updated for es6
  */
@@ -35,6 +35,18 @@ export class PRTGQueryController extends QueryCtrl {
       };
       _.defaults(this, scopeDefaults);
       
+      // Load default values
+      var targetDefaults = {
+        group: { name: "" },
+        device: { name: "" },
+        sensor: { name: "" },
+        channel: { name: "" },
+        functions: [],
+        options: {}
+      };
+      _.defaults(target, targetDefaults);
+
+      
       this.updateGroupList();
       this.updateDeviceList();
       this.updateSensorList();
@@ -48,6 +60,7 @@ export class PRTGQueryController extends QueryCtrl {
       this.getSensorNames = _.partial(getMetricNames, this, 'sensorList');
       this.getChannelNames = _.partial(getMetricNames, this, 'channelList');
     };
+    
     this.init();
   }
   
@@ -77,22 +90,21 @@ export class PRTGQueryController extends QueryCtrl {
    * So we basically perform a single object search, one peice at a time, then we know the sensor ID, and the channel name can be picked.
    */
   selectGroup() {
-    this.updateDeviceList();
     this.targetChange();
+    this.updateDeviceList();
   }
   
   selectDevice() {
-    this.updateSensorList();
     this.targetChange();
+    this.updateSensorList();
   }
   
   selectSensor() {
-    this.updateChannelList();
     this.targetChange();
+    this.updateChannelList();
   }
   
   selectChannel() {
-    this.setTargetAlias();
     this.targetChange();
   }
   
@@ -110,15 +122,12 @@ export class PRTGQueryController extends QueryCtrl {
   }
   
   updateDeviceList() {
-    var group;
+    var groupFilter = this.templateSrv.replace(this.target.group.name);
+   //console.log("groupFilter: " + groupFilter);
     this.metric.deviceList = [{name: '*', visible_name: 'All'}];
     this.addTemplatedVariables(this.metric.deviceList);
-    if (this.target.group) {
-      group = this.target.group.name || undefined;
-      group = this.templateSrv.replace(group);
-    }
-    this.datasource.prtgAPI.getHosts(group, '/.*/').then(devices => {
-//this.datasource.prtgAPI.performDeviceSuggestQuery(group).then(devices => {
+    
+    this.datasource.prtgAPI.getHosts(groupFilter, '/.*/').then(devices => {
       _.map(devices, device => {
         this.metric.deviceList.push({name: device.device, visible_name: device.device});
       });
@@ -126,14 +135,16 @@ export class PRTGQueryController extends QueryCtrl {
   }
 
   updateSensorList() {
-    var device;
+    var groupFilter = this.templateSrv.replace(this.target.group.name);
+    var deviceFilter = this.templateSrv.replace(this.target.device.name);
+   //console.log("deviceFilter: " + deviceFilter);
     this.metric.sensorList = [{name: '*', visible_name: 'All'}];
     this.addTemplatedVariables(this.metric.sensorList);
-    if (this.target.device) {
-      device = this.target.device.name || undefined;
-      device = this.templateSrv.replace(device);
-    }
-    this.datasource.prtgAPI.performSensorSuggestQuery(device).then(sensors => {
+    //I know this is grossly inefficient.
+    //console.log('updateSensorList: getSensors(' + this.targetItems.group + ', ' + this.targetItems.device + ', ' + this.targetItems.sensor +')');
+   //console.log("updateSensorList: getSensors(" + groupFilter + ", " + deviceFilter + ", /.*/");
+    this.datasource.prtgAPI.getSensors(groupFilter, deviceFilter, '/.*/').then(sensors => {
+      //console.log("updateSensorList: devices : " + JSON.stringify(devices,'',4));
       _.map(sensors, sensor => {
         this.metric.sensorList.push({name: sensor.sensor, visible_name: sensor.sensor});
       });
@@ -141,14 +152,14 @@ export class PRTGQueryController extends QueryCtrl {
   }
 
   updateChannelList() {
-    var sensor, device;
+    var groupFilter = this.templateSrv.replace(this.target.group.name);
+    var deviceFilter = this.templateSrv.replace(this.target.device.name);
+    var sensorFilter = this.templateSrv.replace(this.target.sensor.name);
     this.metric.channelList = [{name: 'status', visible_name: 'Last Message'},{name: 'messages', visible_name: 'Messages'}];
     this.addTemplatedVariables(this.metric.channelList);
     if (this.target.sensor) {
-      sensor = this.target.sensor.name;
-      sensor = this.templateSrv.replace(sensor);
-      device = this.templateSrv.replace(this.target.device.name);
-      this.datasource.prtgAPI.performChannelSuggestQuery(sensor, device).then(channels => {
+      //this.datasource.prtgAPI.performChannelSuggestQuery(sensor, device).then(channels => {
+      this.datasource.prtgAPI.getAllItems(groupFilter, deviceFilter, sensorFilter).then(channels => {
         _.map(channels, channel => {
           this.metric.channelList.push({name: channel.name, visible_name: channel.name});
         });

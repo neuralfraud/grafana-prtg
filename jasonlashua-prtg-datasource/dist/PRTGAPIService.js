@@ -66,8 +66,8 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                     var hash = 0;
                     if (str.length === 0) return hash;
                     for (var i = 0; i < str.length; i++) {
-                        var char = str.charCodeAt(i);
-                        hash = (hash << 5) - hash + char;
+                        var chr = str.charCodeAt(i);
+                        hash = (hash << 5) - hash + chr;
                         hash = hash & hash; // Convert to 32bit integer
                     }
                     return hash;
@@ -219,7 +219,7 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
             }, {
                 key: 'getSensorByName',
                 value: function getSensorByName(name, device) {
-                    var params = 'content=sensors&columns=objid,device,sensor&id=' + device;
+                    var params = 'content=sensors&columns=objid,device,sensor&filter_device=' + device;
                     if (name !== '*') {
                         params += '&filter_sensor=' + name;
                     }
@@ -235,13 +235,53 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                     return this.performPRTGAPIRequest('table.json', params);
                 }
             }, {
+                key: 'filterQuery',
+                value: function filterQuery(items, queryStr) {
+                    var filterItems = [];
+                    if (queryStr.match(/{[^{}]+}/g)) {
+                        filterItems = _.trim(queryStr, '{}').split(',');
+                    } else {
+                        filterItems.push(queryStr);
+                    }
+                    //console.log("filterQuery: Find item\n" + JSON.stringify(items,'',4) + "\n\nfilterQuery: Find in array: " + JSON.stringify(filterItems,'',4));
+                    return _.filter(items, function (item) {
+
+                        var findItem;
+                        if (item.group && !item.device) {
+                            //console.log("find in obj.group");
+                            findItem = item.group;
+                        } else if (item.device && !item.sensor) {
+                            //console.log("find in obj.device");
+                            findItem = item.device;
+                        } else if (item.sensor) {
+                            //console.log("find in obj.sensor");
+                            findItem = item.sensor;
+                        } else if (item.channel) {
+                            findItem = item.name;
+                        } else {
+                            //console.log("find ? no usable keys! " + JSON.stringify(item,'',4));
+                            return false;
+                        }
+                        if (utils.isRegex(queryStr)) {
+                            var rex = utils.buildRegex(queryStr);
+                            return rex.test(findItem);
+                        }
+                        if (filterItems.length === 0) {
+                            return true;
+                        }
+                        return filterItems.includes(findItem);
+                    });
+                }
+            }, {
                 key: 'filterMatch',
-                value: function filterMatch(item, filterStr) {
+                value: function filterMatch(findItem, filterStr) {
+                    //console.log('filterMatch: ' + JSON.stringify(findItem,'',4) + ', ' + filterStr);
+
                     if (utils.isRegex(filterStr)) {
                         var rex = utils.buildRegex(filterStr);
-                        return rex.test(item);
+                        return rex.test(findItem);
                     } else {
-                        return item === filterStr;
+                        return findItem === filterStr;
                     }
                 }
             }, {
@@ -249,20 +289,19 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                 value: function getHosts(groupFilter, hostFilter) {
                     var _this3 = this;
 
+                    ////console.log('PRTGAPIService: 328: getHosts(' + groupFilter + ', ' + hostFilter +')');
                     return this.performGroupSuggestQuery().then(function (groups) {
-                        var filteredGroups = _.filter(groups, function (group) {
-                            return _this3.filterMatch(group.group, groupFilter);
-                        });
+                        var filteredGroups = _this3.filterQuery(groups, groupFilter);
                         //console.log('3: getHosts: filteredGroups: ' + JSON.stringify(filteredGroups,'',4));
                         var filters = [];
                         _.each(filteredGroups, function (group) {
                             filters.push('filter_group=' + group.group);
                         });
 
-                        return _this3.performDeviceSuggestQuery("''&" + filters.join('&')).then(function (devices) {
-                            return _.filter(devices, function (device) {
-                                return _this3.filterMatch(device.device, hostFilter);
-                            });
+                        return _this3.performDeviceSuggestQuery("&" + filters.join('&')).then(function (devices) {
+                            // //console.log("filterquery(devices, " + hostFilter + ")");
+
+                            return _this3.filterQuery(devices, hostFilter);
                         });
                     });
                 }
@@ -272,14 +311,14 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                     var _this4 = this;
 
                     return this.getHosts(groupFilter, hostFilter).then(function (hosts) {
+                        //console.log("Got hosts: " + JSON.stringify(hosts, '', 4));
                         var filters = [];
                         _.each(hosts, function (host) {
+                            //console.log("getSensors: add filter element: " + host.device);
                             filters.push('filter_device=' + host.device);
                         });
-                        return _this4.performSensorSuggestQuery("''&" + filters.join('&')).then(function (sensors) {
-                            return _.filter(sensors, function (sensor) {
-                                return _this4.filterMatch(sensor.sensor, sensorFilter);
-                            });
+                        return _this4.performSensorSuggestQuery("&" + filters.join('&')).then(function (sensors) {
+                            return _this4.filterQuery(sensors, sensorFilter);
                         });
                     });
                 }
@@ -320,6 +359,7 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                     var _this6 = this;
 
                     return this.getAllItems(groupFilter, deviceFilter, sensorFilter).then(function (items) {
+                        //return this.filterQuery(items, channelFilter);
                         return _.filter(items, function (item) {
                             return _this6.filterMatch(item.name, channelFilter);
                         });
@@ -360,7 +400,7 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                         params = "&id=" + sensor;
                         return this.performPRTGAPIRequest('getsensordetails.json', params).then(function (results) {
                             var statusid = results.statusid;
-                            console.log("Status ID: " + statusid);
+                            filter("Status ID: " + statusid);
                             var dt = Date.now();
                             result.push([statusid, dt]);
                             return result;

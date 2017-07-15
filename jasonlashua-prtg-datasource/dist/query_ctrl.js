@@ -92,6 +92,17 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
             };
             _.defaults(this, scopeDefaults);
 
+            // Load default values
+            var targetDefaults = {
+              group: { name: "" },
+              device: { name: "" },
+              sensor: { name: "" },
+              channel: { name: "" },
+              functions: [],
+              options: {}
+            };
+            _.defaults(target, targetDefaults);
+
             this.updateGroupList();
             this.updateDeviceList();
             this.updateSensorList();
@@ -105,6 +116,7 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
             this.getSensorNames = _.partial(getMetricNames, this, 'sensorList');
             this.getChannelNames = _.partial(getMetricNames, this, 'channelList');
           };
+
           _this.init();
           return _this;
         }
@@ -135,25 +147,24 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
         }, {
           key: 'selectGroup',
           value: function selectGroup() {
-            this.updateDeviceList();
             this.targetChange();
+            this.updateDeviceList();
           }
         }, {
           key: 'selectDevice',
           value: function selectDevice() {
-            this.updateSensorList();
             this.targetChange();
+            this.updateSensorList();
           }
         }, {
           key: 'selectSensor',
           value: function selectSensor() {
-            this.updateChannelList();
             this.targetChange();
+            this.updateChannelList();
           }
         }, {
           key: 'selectChannel',
           value: function selectChannel() {
-            this.setTargetAlias();
             this.targetChange();
           }
         }, {
@@ -174,15 +185,12 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
           value: function updateDeviceList() {
             var _this4 = this;
 
-            var group;
+            var groupFilter = this.templateSrv.replace(this.target.group.name);
+            //console.log("groupFilter: " + groupFilter);
             this.metric.deviceList = [{ name: '*', visible_name: 'All' }];
             this.addTemplatedVariables(this.metric.deviceList);
-            if (this.target.group) {
-              group = this.target.group.name || undefined;
-              group = this.templateSrv.replace(group);
-            }
-            this.datasource.prtgAPI.getHosts(group, '/.*/').then(function (devices) {
-              //this.datasource.prtgAPI.performDeviceSuggestQuery(group).then(devices => {
+
+            this.datasource.prtgAPI.getHosts(groupFilter, '/.*/').then(function (devices) {
               _.map(devices, function (device) {
                 _this4.metric.deviceList.push({ name: device.device, visible_name: device.device });
               });
@@ -193,14 +201,16 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
           value: function updateSensorList() {
             var _this5 = this;
 
-            var device;
+            var groupFilter = this.templateSrv.replace(this.target.group.name);
+            var deviceFilter = this.templateSrv.replace(this.target.device.name);
+            //console.log("deviceFilter: " + deviceFilter);
             this.metric.sensorList = [{ name: '*', visible_name: 'All' }];
             this.addTemplatedVariables(this.metric.sensorList);
-            if (this.target.device) {
-              device = this.target.device.name || undefined;
-              device = this.templateSrv.replace(device);
-            }
-            this.datasource.prtgAPI.performSensorSuggestQuery(device).then(function (sensors) {
+            //I know this is grossly inefficient.
+            //console.log('updateSensorList: getSensors(' + this.targetItems.group + ', ' + this.targetItems.device + ', ' + this.targetItems.sensor +')');
+            //console.log("updateSensorList: getSensors(" + groupFilter + ", " + deviceFilter + ", /.*/");
+            this.datasource.prtgAPI.getSensors(groupFilter, deviceFilter, '/.*/').then(function (sensors) {
+              //console.log("updateSensorList: devices : " + JSON.stringify(devices,'',4));
               _.map(sensors, function (sensor) {
                 _this5.metric.sensorList.push({ name: sensor.sensor, visible_name: sensor.sensor });
               });
@@ -211,14 +221,14 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
           value: function updateChannelList() {
             var _this6 = this;
 
-            var sensor, device;
+            var groupFilter = this.templateSrv.replace(this.target.group.name);
+            var deviceFilter = this.templateSrv.replace(this.target.device.name);
+            var sensorFilter = this.templateSrv.replace(this.target.sensor.name);
             this.metric.channelList = [{ name: 'status', visible_name: 'Last Message' }, { name: 'messages', visible_name: 'Messages' }];
             this.addTemplatedVariables(this.metric.channelList);
             if (this.target.sensor) {
-              sensor = this.target.sensor.name;
-              sensor = this.templateSrv.replace(sensor);
-              device = this.templateSrv.replace(this.target.device.name);
-              this.datasource.prtgAPI.performChannelSuggestQuery(sensor, device).then(function (channels) {
+              //this.datasource.prtgAPI.performChannelSuggestQuery(sensor, device).then(channels => {
+              this.datasource.prtgAPI.getAllItems(groupFilter, deviceFilter, sensorFilter).then(function (channels) {
                 _.map(channels, function (channel) {
                   _this6.metric.channelList.push({ name: channel.name, visible_name: channel.name });
                 });
