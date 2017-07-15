@@ -2,12 +2,12 @@
 A PRTG Datasource plugin for Grafana (BETA!!)
 
 Works with 4.x - just drop the "jasonlashua-prtg-datasource" folder into the "data/plugins" folder of your Grafana installation and restart the grafana server.
-#CHANGELOG
+# CHANGELOG
 
-##July 15, 2017 - Version 4.0!
+## July 15, 2017 - Version 4.0!
 This version contains many great enhancements and hopefully addresses some of the open issues.
 
-###Templating Support
+### Templating Support
 
 * Template queries now return ALL items
 * Multiple-value variables are fully supported
@@ -17,12 +17,12 @@ This version contains many great enhancements and hopefully addresses some of th
 "device:group=$group" returns all devices that exist in the variable named "$group"
 "sensor:device=$device" returns all sensors that belong to the devices in the variable named "$device"
 
-###Query Editor
+### Query Editor
 
 * Full regex support! Regular expressions can be used to create powerful queries that return many items ...in a single query!
 * Multiple-value variables support! For instance, if a template variable "$groups" is selected, and the that variable contains two groups, the "device" query is filtered accordingly.
 
-###Other
+### Other
 
 When using a single query that returns data from multiple hosts, the alias for each item includes the hostname. However, this does not work with multiple individual host queries, i.e., it's a bug.
 
