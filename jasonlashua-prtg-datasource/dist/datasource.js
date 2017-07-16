@@ -48,7 +48,7 @@ System.register(['lodash', 'app/core/utils/datemath', './PRTGAPIService'], funct
                     * @param {object} Grafana Datasource Object
                     */
                     this.templateSrv = templateSrv;
-                    this.alertServ = alertSrv;
+                    this.alertSrv = alertSrv;
 
                     this.name = instanceSettings.name;
                     this.url = instanceSettings.url;
@@ -99,7 +99,6 @@ System.register(['lodash', 'app/core/utils/datemath', './PRTGAPIService'], funct
                             if (target.hide || !target.group || !target.device || !target.channel || !target.sensor) {
                                 return [];
                             }
-
                             target.group.name = _this2.templateSrv.replace(target.group.name, options.scopedVars);
                             target.device.name = _this2.templateSrv.replace(target.device.name, options.scopedVars);
                             target.sensor.name = _this2.templateSrv.replace(target.sensor.name, options.scopedVars);
@@ -116,23 +115,25 @@ System.register(['lodash', 'app/core/utils/datemath', './PRTGAPIService'], funct
                             if (target.channel.name == '*') {
                                 target.channel.name = "/.*/";
                             }
-                            //oh isn't that just crappy? works for now!
-                            //console.log('target: ' + JSON.stringify(target,'',4));
                             return _this2.prtgAPI.getItemsFromTarget(target).then(function (items) {
                                 //console.log('query: items: ' + JSON.stringify(items,'',4));
                                 var devices = _.uniq(_.map(items, 'device'));
                                 //console.log('devices: ' + JSON.stringify(items,'',4));
-                                var promise = _.map(items, function (item) {
-                                    return _this2.prtgAPI.getItemHistory(item.sensor, item.name, from, to).then(function (values) {
+                                var historyPromise = _.map(items, function (item) {
+                                    return _this2.prtgAPI.getItemHistory(item.sensor, item.name, from, to).then(function (history) {
+                                        //console.log("Target history data: " + JSON.stringify(history,'',4));
                                         var alias = item.name;
                                         if (_.keys(devices).length > 1) {
                                             alias = item.device + ': ' + alias;
                                         }
-                                        var timeseries = { target: alias, datapoints: values };
+                                        var datapoints = _.map(history, function (hist) {
+                                            return [hist.value, hist.datetime];
+                                        });
+                                        var timeseries = { target: alias, datapoints: datapoints };
                                         return timeseries;
                                     });
                                 });
-                                return Promise.all(promise).then(_.flatten);
+                                return Promise.all(historyPromise);
                             });
                         });
 
@@ -169,27 +170,72 @@ System.register(['lodash', 'app/core/utils/datemath', './PRTGAPIService'], funct
                         //group.host.sensor.channel
                         //*.$host.
                         //console.log("Metricfindquery: " + query);
-                        var params = "";
-                        var a = query.split(':');
-                        var b;
-                        if (a[1] !== '*') {
-                            b = a[1].split('=');
+                        var filter = {};
+                        var queryParts = query.split(':');
+                        filter.type = queryParts[0];
+                        filter.filter = queryParts[1];
+                        if (queryParts[1] !== '*') {
+                            var queryFilter = queryParts[1].split('=');
+                            filter.filter = queryFilter[0];
+                            filter.filterExpression = this.templateSrv.replace(queryFilter[1]);
                         }
-                        if (a[0] == "channel") {
-                            params = "&content=channels&columns=name&id=" + this.templateSrv.replace(b[1]);
-                            //a[0]="name";
-                        } else {
-                            params = "&content=" + a[0] + "s&count=9999";
-                            if (a[1] !== '*') {
-                                params = params + "&filter_" + this.templateSrv.replace(a[1]);
+                        console.log("metricFindQuery: filter: " + JSON.stringify(filter));
+                        var items;
+                        if (filter.type == 'group') {
+                            if (filter.filterExpression && filter.filter == 'group') {
+                                items = this.prtgAPI.getGroups(filter.filterExpression);
+                            } else {
+                                items = this.prtgAPI.getGroups();
+                            }
+                        } else if (filter.type == 'device') {
+                            if (filter.filterExpression) {
+                                if (filter.filter == 'group') {
+                                    items = this.prtgAPI.getHosts(filter.filterExpression);
+                                } else if (filter.filter == 'device') {
+                                    items = this.prtgAPI.getHosts('/.*/', filter.filterExpression);
+                                } else {
+                                    this.alertError('Device template query is malformed.');
+                                    return Promise.resolve([]);
+                                }
+                            } else {
+                                items = this.prtgAPI.getHosts();
+                            }
+                        } else if (filter.type == 'sensor') {
+                            if (filter.filterExpression) {
+                                if (filter.filter == 'group') {
+                                    items = this.prtgAPI.getSensors(filter.filterExpression);
+                                } else if (filter.filter == 'device') {
+                                    items = this.prtgAPI.getSensors('/.*/', filter.filterExpression);
+                                } else if (filter.filter == 'sensor') {
+                                    items = this.prtgAPI.getSensors('/.*/', '/.*/', filter.filterExpression);
+                                } else {
+                                    this.alertError('Sensor template query is malformed.');
+                                    return Promise.resolve([]);
+                                }
+                            } else {
+                                items = this.prtgAPI.getSensors();
+                            }
+                        } else if (filter.type == 'channel') {
+                            if (filter.filter == 'sensor' && typeof filter.filterExpression == 'number') {
+                                params = "&content=channels&columns=name&id=" + filter.filterExpression;
+                                items = this.prtgAPI.performPRTGAPIRequest('table.json', params);
+                            } else {
+                                this.alertError('Channel template query is malformed.');
+                                return Promise.resolve([]);
                             }
                         }
-                        return this.prtgAPI.performPRTGAPIRequest('table.json', params).then(function (results) {
-
-                            return _.map(results, function (res) {
-                                return { text: res[a[0]], expandable: 0 };
+                        return items.then(function (metrics) {
+                            return _.map(metrics, function (metric) {
+                                return { text: metric[filter.type], expandable: 0 };
                             }, _this4);
                         });
+                    }
+                }, {
+                    key: 'alertError',
+                    value: function alertError(message) {
+                        var timeout = arguments.length <= 1 || arguments[1] === undefined ? 5000 : arguments[1];
+
+                        this.alertSrv.set("PRTG API Error", message, 'error', timeout);
                     }
                 }]);
 
