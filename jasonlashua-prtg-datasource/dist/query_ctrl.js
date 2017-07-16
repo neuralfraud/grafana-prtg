@@ -168,6 +168,30 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
             this.targetChange();
           }
         }, {
+          key: 'onQueryOptionChange',
+          value: function onQueryOptionChange() {
+            this.queryOptionsText = this.renderQueryOptionsText();
+            this.targetChange();
+          }
+        }, {
+          key: 'renderQueryOptionsText',
+          value: function renderQueryOptionsText() {
+            var optionsMap = {};
+            var options = [];
+            _.forOwn(this.target.options, function (value, key) {
+              if (value) {
+                if (value === true) {
+                  // Show only option name (if enabled) for boolean options
+                  options.push(optionsMap[key]);
+                } else {
+                  // Show "option = value" for another options
+                  options.push(optionsMap[key] + " = " + value);
+                }
+              }
+            });
+            return "Options: " + options.join(', ');
+          }
+        }, {
           key: 'updateGroupList',
           value: function updateGroupList() {
             var _this3 = this;

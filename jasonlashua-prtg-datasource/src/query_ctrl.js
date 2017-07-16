@@ -107,6 +107,27 @@ export class PRTGQueryController extends QueryCtrl {
   selectChannel() {
     this.targetChange();
   }
+  onQueryOptionChange() {
+    this.queryOptionsText = this.renderQueryOptionsText();
+    this.targetChange();
+  }
+
+  renderQueryOptionsText() {
+    var optionsMap = {};
+    var options = [];
+    _.forOwn(this.target.options, (value, key) => {
+      if (value) {
+        if (value === true) {
+          // Show only option name (if enabled) for boolean options
+          options.push(optionsMap[key]);
+        } else {
+          // Show "option = value" for another options
+          options.push(optionsMap[key] + " = " + value);
+        }
+      }
+    });
+    return "Options: " + options.join(', ');
+  }
   
   /*
    * Update the content of each list

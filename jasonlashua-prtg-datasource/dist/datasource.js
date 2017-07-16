@@ -123,6 +123,9 @@ System.register(['lodash', 'app/core/utils/datemath', './PRTGAPIService'], funct
                                     return _this2.prtgAPI.getItemHistory(item.sensor, item.name, from, to).then(function (history) {
                                         //console.log("Target history data: " + JSON.stringify(history,'',4));
                                         var alias = item.name;
+                                        if (target.options.includeSensorName) {
+                                            alias = item.sensor_raw + ": " + alias;
+                                        }
                                         if (_.keys(devices).length > 1) {
                                             alias = item.device + ': ' + alias;
                                         }

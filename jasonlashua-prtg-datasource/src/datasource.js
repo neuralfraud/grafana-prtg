@@ -80,7 +80,10 @@ class PRTGDataSource {
                         return this.prtgAPI.getItemHistory(item.sensor, item.name, from, to)
                         .then(history => {
                             //console.log("Target history data: " + JSON.stringify(history,'',4));
-                            var alias = item.name;                              
+                            var alias = item.name;
+                            if (target.options.includeSensorName) {
+                                alias = item.sensor_raw + ": " + alias;
+                            }
                             if (_.keys(devices).length > 1) {
                                 alias = item.device + ': ' + alias;
                             }

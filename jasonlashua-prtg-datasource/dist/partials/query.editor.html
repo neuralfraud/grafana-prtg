@@ -69,18 +69,21 @@
 			<div class="gf-form-label gf-form-label--grow"></div>
 		</div>
 	</div>
-
-
-	<!-- Metric processing functions -->
-	<div class="gf-form-inline" ng-hide="ctrl.target.mode">
-		<div class="gf-form">
-			<label class="gf-form-label query-keyword width-7">Functions</label>
-			<div ng-repeat="func in ctrl.target.functions" class="gf-form-label query-part" metric-function-editor></div>
-			</div>
-			<div class="gf-form dropdown" add-metric-function>
-			</div>
-			<div class="gf-form gf-form--grow">
+	<div class="gf-form-inline">
+		<div class="gf-form max-width-40">
+			<label class="gf-form-label query-keyword width-7">Options</label>
+		</div>
+		<div class="gf-form-inline">
+		  <gf-form-switch class="gf-form" label="Include Sensor Name"
+			checked="ctrl.target.options.includeSensorName"
+			on-change="ctrl.onQueryOptionChange()">
+		  </gf-form-switch>
+		</div>
+		<div class="gf-form gf-form--grow">
 			<div class="gf-form-label gf-form-label--grow"></div>
 		</div>
 	</div>
+
+	<!-- Metric processing functions -->
+
 </query-editor-row>
