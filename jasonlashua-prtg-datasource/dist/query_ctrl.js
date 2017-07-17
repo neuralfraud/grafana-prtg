@@ -89,7 +89,7 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
             var scopeDefaults = {
 
               metric: {
-                propertyList: [{ name: "tags", visible_name: "Tags" }, { name: "status", visible_name: "Status" }, { name: "message_raw", visible_name: "Message" }, { name: "priority", visible_name: "Priority" }],
+                propertyList: [{ name: "tags", visible_name: "Tags" }, { name: "active", visible_name: "Active" }, { name: "status", visible_name: "Status" }, { name: "status_raw", visible_name: "Status (raw)" }, { name: "message_raw", visible_name: "Message" }, { name: "priority", visible_name: "Priority" }],
                 textValueFromList: [{ name: "group", visible_name: "Group" }, { name: "device", visible_name: "Device" }, { name: "sensor", visible_name: "Sensor" }]
               },
               oldTarget: _.cloneDeep(this.target)
@@ -108,7 +108,8 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
                 mode: {
                   name: "Metrics", value: 1,
                   filterProperty: {},
-                  textValueFrom: {}
+                  textValueFrom: {},
+                  textProperty: {}
                 }
               }
             };

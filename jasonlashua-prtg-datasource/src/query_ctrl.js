@@ -35,7 +35,9 @@ export class PRTGQueryController extends QueryCtrl {
         metric:{
           propertyList: [
             {name: "tags", visible_name: "Tags"},
+            {name: "active", visible_name: "Active"},
             {name: "status", visible_name: "Status"},
+            {name: "status_raw", visible_name: "Status (raw)"},
             {name: "message_raw", visible_name: "Message"},
             {name: "priority", visible_name: "Priority"}
           ],
@@ -61,7 +63,8 @@ export class PRTGQueryController extends QueryCtrl {
           mode: {
             name: "Metrics", value: 1,
             filterProperty: {},
-            textValueFrom: {}
+            textValueFrom: {},
+            textProperty: {}
           }
         }
       };

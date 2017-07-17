@@ -121,19 +121,15 @@ class PRTGDataSource {
             if (!target.options.textFilter) {
                 target.options.textFilter = '/.*/';
             }
-                
             
             return textPromise.then(items => {
                 var filtered = _.filter(items, item => {
-                    return utils.filterMatch(item.message_raw, target.options.textFilter);
+                    return utils.filterMatch(item[target.options.textProperty.name], target.options.textFilter);
                 });
                 return _.map(filtered, item => {
-                    console.log(JSON.stringify(item,'',4));
                     var alias = item[target.options.textValueFrom.name];
-                    console.log("alias: " + alias);
-                    console.log("value: " + item.message_raw);
                     var decodeText = document.createElement("textarea");
-                    decodeText.innerHTML = item.message_raw;
+                    decodeText.innerHTML = item[target.options.textProperty.name];
                     return {target: alias, datapoints: [[decodeText.value, Date.now()]]};
                 });
             });

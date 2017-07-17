@@ -220,64 +220,7 @@ function PRTGAPIService(alertSrv, backendSrv) {
             return this.performPRTGAPIRequest('table.json', params);
         }
     
-        /**
-         * Query API for list of channels bound to a given sensor
-         * the sensor Id is unique to each device
-         *
-         * @return promise - JSON result set
-         */
-/*        performChannelSuggestQuery(sensorId, device) {
-            var arr = [{"device": device}, {"sensor":sensorId}];
-            var p = [];
-            p = _.map(arr, a => {
-                if (a.device && typeof a.device == "string") {
-                     return this.getDeviceByName(a.device);
-                }
-                
-                if (a.sensor && typeof a.sensor == "string") {
-                    return this.getSensorByName(a.sensor,arr[0].device);
-                }
-                
-            });
-            
-            return Promise.all(p).then(a => {
-                var sensor = a[1][0].objid;
-                var params = 'content=channels&columns=objid,channel,sensor,name&id=' + sensor;
-                return this.performPRTGAPIRequest('table.json', params);
-            });
-        }
-  */  
-        /**
-         *  For Templating: Retrieve device ObjId by it's name.
-         */
-        /*getDeviceByName(name)    {
-            var params = 'content=devices&columns=objid,device&filter_device=' + name;
-            return this.performPRTGAPIRequest('table.json', params);
-        }
-*/
-        /**
-         *  For Templating: Retrieve Sensor ObjId by it's name and parent device ObjId
-         */
-   /*     getSensorByName(name, device)    {
-            var params = 'content=sensors&columns=objid,device,sensor&filter_device=' + device;
-            if (name !== '*') {
-                params += '&filter_sensor=' + name;
-            }   
-            return this.performPRTGAPIRequest('table.json', params);
-        }
- */   
-        /**
-         * For templating: Retrieve Channel id from its given name.
-         * Sensor ID (number) required.
-         */
-   /*     getChannelByName(name, sensor) {
-            var params = 'content=channels&columns=objid,channel,channelid&id='+ sensor;
-            if (name !== "*") {
-                params = params.concat('&filter_channel=' + name);
-            }
-            return this.performPRTGAPIRequest('table.json', params);
-        }
-*/
+ 
         filterQuery(items, queryStr, invert = false) {
             /**
              * group device sensor includes properties:
@@ -334,24 +277,7 @@ function PRTGAPIService(alertSrv, backendSrv) {
                 return filterItems.includes(findItem);
             });
         }
-            
-        
-        /*
-         *filterMatch(findItem, filterStr, invert = false) {
-            var result;
-            if(utils.isRegex(filterStr)) {
-                var rex = utils.buildRegex(filterStr);
-                result = rex.test(findItem);
-            } else {
-                result = (findItem === filterStr);
-            }
-            if (invert) {
-                return !result;
-            }
-            return result;
-        }
-        */
-        
+ 
         getGroups(groupFilter = '/.*/') {
             console.log("getGroups('" + groupFilter + "')");
             return this.performGroupSuggestQuery().then(groups => {

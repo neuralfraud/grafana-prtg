@@ -171,15 +171,12 @@ System.register(['lodash', 'app/core/utils/datemath', './PRTGAPIService', './uti
 
                         return textPromise.then(function (items) {
                             var filtered = _.filter(items, function (item) {
-                                return utils.filterMatch(item.message_raw, target.options.textFilter);
+                                return utils.filterMatch(item[target.options.textProperty.name], target.options.textFilter);
                             });
                             return _.map(filtered, function (item) {
-                                console.log(JSON.stringify(item, '', 4));
                                 var alias = item[target.options.textValueFrom.name];
-                                console.log("alias: " + alias);
-                                console.log("value: " + item.message_raw);
                                 var decodeText = document.createElement("textarea");
-                                decodeText.innerHTML = item.message_raw;
+                                decodeText.innerHTML = item[target.options.textProperty.name];
                                 return { target: alias, datapoints: [[decodeText.value, Date.now()]] };
                             });
                         });
