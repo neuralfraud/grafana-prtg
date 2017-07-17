@@ -101,7 +101,7 @@ class PRTGDataSource {
             return this.prtgAPI.performPRTGAPIRequest(target.raw.uri, target.raw.queryString).then(rawData => {
                 if (Array.isArray(rawData)) {
                     return _.map(rawData, doc => {
-                                return {target: 'blah', datapoints: [rawData], type: 'docs'};
+                                return {target: 'blah', datapoints: [doc], type: 'docs'};
                     
                     });
                 } else {

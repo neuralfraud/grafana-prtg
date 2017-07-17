@@ -146,7 +146,7 @@ System.register(['lodash', 'app/core/utils/datemath', './PRTGAPIService', './uti
                         return this.prtgAPI.performPRTGAPIRequest(target.raw.uri, target.raw.queryString).then(function (rawData) {
                             if (Array.isArray(rawData)) {
                                 return _.map(rawData, function (doc) {
-                                    return { target: 'blah', datapoints: [rawData], type: 'docs' };
+                                    return { target: 'blah', datapoints: [doc], type: 'docs' };
                                 });
                             } else {
                                 return { target: 'blah', datapoints: [rawData], type: 'docs' };
