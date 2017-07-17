@@ -297,14 +297,14 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
         }, {
           key: 'isRegex',
           value: function isRegex() {
-            var str = arguments.length <= 0 || arguments[0] === undefined ? '' : arguments[0];
+            var str = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
 
             return utils.isRegex(str);
           }
         }, {
           key: 'isVariable',
           value: function isVariable() {
-            var str = arguments.length <= 0 || arguments[0] === undefined ? '' : arguments[0];
+            var str = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
 
             return utils.isTemplateVariable(str);
           }

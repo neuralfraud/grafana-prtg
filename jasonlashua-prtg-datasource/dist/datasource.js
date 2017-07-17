@@ -121,6 +121,10 @@ System.register(['lodash', 'app/core/utils/datemath', './PRTGAPIService', './uti
                             if (target.channel.name == '*') {
                                 target.channel.name = "/.*/";
                             }
+                            if (!target.options.mode) //legacy dashboard compat.
+                                {
+                                    target.options.mode.name = "Metrics";
+                                }
 
                             if (target.options.mode.name == "Metrics") {
                                 return _this2.queryMetrics(target, from, to);
@@ -140,7 +144,13 @@ System.register(['lodash', 'app/core/utils/datemath', './PRTGAPIService', './uti
                     key: 'queryRaw',
                     value: function queryRaw(target, from, to) {
                         return this.prtgAPI.performPRTGAPIRequest(target.raw.uri, target.raw.queryString).then(function (rawData) {
-                            return { target: 'blah', datapoints: [rawData], type: 'docs' };
+                            if (Array.isArray(rawData)) {
+                                return _.map(rawData, function (doc) {
+                                    return { target: 'blah', datapoints: [rawData], type: 'docs' };
+                                });
+                            } else {
+                                return { target: 'blah', datapoints: [rawData], type: 'docs' };
+                            }
                         });
                     }
                 }, {
@@ -300,7 +310,7 @@ System.register(['lodash', 'app/core/utils/datemath', './PRTGAPIService', './uti
                 }, {
                     key: 'alertError',
                     value: function alertError(message) {
-                        var timeout = arguments.length <= 1 || arguments[1] === undefined ? 5000 : arguments[1];
+                        var timeout = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 5000;
 
                         this.alertSrv.set("PRTG API Error", message, 'error', timeout);
                     }

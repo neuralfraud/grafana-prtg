@@ -76,7 +76,11 @@ class PRTGDataSource {
                 if (target.device.name == '*') { target.device.name = "/.*/";}
                 if (target.sensor.name == '*') { target.sensor.name = "/.*/";}
                 if (target.channel.name == '*') { target.channel.name = "/.*/";}
-                
+                if (!target.options.mode) //legacy dashboard compat.
+                    {
+                        target.options.mode.name = "Metrics";
+                    }
+
                 if (target.options.mode.name == "Metrics") {
                     return this.queryMetrics(target, from, to);
                 } else if (target.options.mode.name == "Text") {
@@ -95,7 +99,15 @@ class PRTGDataSource {
         
         queryRaw(target, from, to) {
             return this.prtgAPI.performPRTGAPIRequest(target.raw.uri, target.raw.queryString).then(rawData => {
-                return {target: 'blah', datapoints: [rawData], type: 'docs'};
+                if (Array.isArray(rawData)) {
+                    return _.map(rawData, doc => {
+                                return {target: 'blah', datapoints: [rawData], type: 'docs'};
+                    
+                    });
+                } else {
+                    return {target: 'blah', datapoints: [rawData], type: 'docs'};
+                }
+                    
             });
         }
         queryText(target, from, to) {

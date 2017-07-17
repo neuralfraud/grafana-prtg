@@ -40,7 +40,7 @@ System.register([], function (_export, _context) {
   _export("escapeRegex", escapeRegex);
 
   function filterMatch(findItem, filterStr) {
-    var invert = arguments.length <= 2 || arguments[2] === undefined ? false : arguments[2];
+    var invert = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
 
     var result;
     if (isRegex(filterStr)) {

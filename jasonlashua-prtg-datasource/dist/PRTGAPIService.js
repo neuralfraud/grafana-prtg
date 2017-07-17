@@ -188,7 +188,7 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
             }, {
                 key: 'filterQuery',
                 value: function filterQuery(items, queryStr) {
-                    var invert = arguments.length <= 2 || arguments[2] === undefined ? false : arguments[2];
+                    var invert = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
 
                     /**
                      * group device sensor includes properties:
@@ -250,7 +250,7 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                 value: function getGroups() {
                     var _this2 = this;
 
-                    var groupFilter = arguments.length <= 0 || arguments[0] === undefined ? '/.*/' : arguments[0];
+                    var groupFilter = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '/.*/';
 
                     console.log("getGroups('" + groupFilter + "')");
                     return this.performGroupSuggestQuery().then(function (groups) {
@@ -262,8 +262,8 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                 value: function getHosts() {
                     var _this3 = this;
 
-                    var groupFilter = arguments.length <= 0 || arguments[0] === undefined ? '/.*/' : arguments[0];
-                    var hostFilter = arguments.length <= 1 || arguments[1] === undefined ? '/.*/' : arguments[1];
+                    var groupFilter = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '/.*/';
+                    var hostFilter = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '/.*/';
 
                     return this.getGroups(groupFilter).then(function (filteredGroups) {
                         var filters = [];
@@ -278,12 +278,12 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
             }, {
                 key: 'getSensors',
                 value: function getSensors() {
-                    var groupFilter = arguments.length <= 0 || arguments[0] === undefined ? '/.*/' : arguments[0];
+                    var groupFilter = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '/.*/';
 
                     var _this4 = this;
 
-                    var hostFilter = arguments.length <= 1 || arguments[1] === undefined ? '/.*/' : arguments[1];
-                    var sensorFilter = arguments.length <= 2 || arguments[2] === undefined ? '/.*/' : arguments[2];
+                    var hostFilter = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '/.*/';
+                    var sensorFilter = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '/.*/';
 
                     return this.getHosts(groupFilter, hostFilter).then(function (hosts) {
                         var filters = [];
@@ -298,12 +298,12 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
             }, {
                 key: 'getAllItems',
                 value: function getAllItems() {
-                    var groupFilter = arguments.length <= 0 || arguments[0] === undefined ? '/.*/' : arguments[0];
+                    var groupFilter = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '/.*/';
 
                     var _this5 = this;
 
-                    var hostFilter = arguments.length <= 1 || arguments[1] === undefined ? '/.*/' : arguments[1];
-                    var sensorFilter = arguments.length <= 2 || arguments[2] === undefined ? '/.*/' : arguments[2];
+                    var hostFilter = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '/.*/';
+                    var sensorFilter = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '/.*/';
 
                     return this.getSensors(groupFilter, hostFilter, sensorFilter).then(function (sensors) {
 
@@ -338,7 +338,7 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                 value: function getItems(groupFilter, deviceFilter, sensorFilter, channelFilter) {
                     var _this6 = this;
 
-                    var invertChannelFilter = arguments.length <= 4 || arguments[4] === undefined ? false : arguments[4];
+                    var invertChannelFilter = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : false;
 
                     return this.getAllItems(groupFilter, deviceFilter, sensorFilter).then(function (items) {
                         return _this6.filterQuery(items, channelFilter, invertChannelFilter);
