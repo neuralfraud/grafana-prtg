@@ -14,8 +14,8 @@
       "url": "https://github.com/neuralfraud"
     },
     "logos": {
-      "small": "img/PRTGlogo.png",
-      "large": "img/PRTGlogo.png"
+      "small": "img/prtglogo.png",
+      "large": "img/prtglogo.png"
     },
     "links": [
       {"name": "GitHub", "url": "https://github.com/neuralfraud/grafana-prtg"}
