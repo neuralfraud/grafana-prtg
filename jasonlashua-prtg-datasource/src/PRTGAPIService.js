@@ -193,7 +193,7 @@ function PRTGAPIService(alertSrv, backendSrv) {
          * @return promise - JSON result set
          */
         performGroupSuggestQuery() {
-            var params = 'content=groups&columns=objid,group';
+            var params = 'content=groups&columns=objid,group,probe,tags,active,status,message,priority';
             return this.performPRTGAPIRequest('table.json', params);
         }
     
@@ -203,7 +203,7 @@ function PRTGAPIService(alertSrv, backendSrv) {
          * @return promise - JSON result set
          */
         performDeviceSuggestQuery(groupFilter) {
-            var params = 'content=devices&columns=objid,device';
+            var params = 'content=devices&columns=objid,device,group,probe,tags,active,status,message,priority';
             if (groupFilter) {
                 params += ',group' + groupFilter;
             }
@@ -216,7 +216,7 @@ function PRTGAPIService(alertSrv, backendSrv) {
          * @return promise - JSON result set
          */
         performSensorSuggestQuery(deviceFilter) {
-            var params = 'content=sensors&columns=objid,sensor,device,group' + deviceFilter;
+            var params = 'content=sensors&columns=objid,sensor,device,group,probe,tags,active,status,message,priority' + deviceFilter;
             return this.performPRTGAPIRequest('table.json', params);
         }
     
@@ -226,7 +226,7 @@ function PRTGAPIService(alertSrv, backendSrv) {
          *
          * @return promise - JSON result set
          */
-        performChannelSuggestQuery(sensorId, device) {
+/*        performChannelSuggestQuery(sensorId, device) {
             var arr = [{"device": device}, {"sensor":sensorId}];
             var p = [];
             p = _.map(arr, a => {
@@ -246,39 +246,54 @@ function PRTGAPIService(alertSrv, backendSrv) {
                 return this.performPRTGAPIRequest('table.json', params);
             });
         }
-    
+  */  
         /**
          *  For Templating: Retrieve device ObjId by it's name.
          */
-        getDeviceByName(name)    {
+        /*getDeviceByName(name)    {
             var params = 'content=devices&columns=objid,device&filter_device=' + name;
             return this.performPRTGAPIRequest('table.json', params);
         }
-
+*/
         /**
          *  For Templating: Retrieve Sensor ObjId by it's name and parent device ObjId
          */
-        getSensorByName(name, device)    {
+   /*     getSensorByName(name, device)    {
             var params = 'content=sensors&columns=objid,device,sensor&filter_device=' + device;
             if (name !== '*') {
                 params += '&filter_sensor=' + name;
             }   
             return this.performPRTGAPIRequest('table.json', params);
         }
-    
+ */   
         /**
          * For templating: Retrieve Channel id from its given name.
          * Sensor ID (number) required.
          */
-        getChannelByName(name, sensor) {
+   /*     getChannelByName(name, sensor) {
             var params = 'content=channels&columns=objid,channel,channelid&id='+ sensor;
             if (name !== "*") {
                 params = params.concat('&filter_channel=' + name);
             }
             return this.performPRTGAPIRequest('table.json', params);
         }
-
-        filterQuery(items, queryStr) {
+*/
+        filterQuery(items, queryStr, invert = false) {
+            /**
+             * group device sensor includes properties:
+             * objid: num
+             * sensor: Name
+             * device: Device name
+             * group: Group name
+             * tags: comma separated
+             * active: true|false
+             * active_raw: -1 for true? wtf
+             * status: Status text
+             * status_raw: number
+             * message: html message
+             * message_raw: text message
+             * priority: number 1-5
+             */
             var filterItems = [];
             if (queryStr.match(/{[^{}]+}/g)) {
                 filterItems = _.trim(queryStr, '{}').split(',');
@@ -292,33 +307,50 @@ function PRTGAPIService(alertSrv, backendSrv) {
                     findItem = item.group;
                 } else if (item.device && !item.sensor) {
                     findItem = item.device;
-                } else if (item.sensor) {
+                } else if (item.sensor && !item.name) {
                     findItem = item.sensor;
-                } else if (item.channel) {
+                } else if (item.name) {
+                    //console.log("FILTER: item.name " + JSON.stringify(item,'',4));
                     findItem = item.name;
                 } else {
                     return false;
                 }
                 if (utils.isRegex(queryStr)) {
                     var rex = utils.buildRegex(queryStr);
-                    return rex.test(findItem);
+                    var result = rex.test(findItem);
+                    if (invert) {
+                        return !result;
+                    }
+                    return result;
                 }
                 if (filterItems.length === 0) {
                     return true;
                 }
+                if (invert) {
+                    return !filterItems.includes(findItem);
+                }
+                //console.log("FILTERITEMS: " + JSON.stringify(filterItems,'',4));
+                //console.log("FINDITEM: " + JSON.stringify(findItem,'',4));
                 return filterItems.includes(findItem);
             });
         }
             
         
-        filterMatch(findItem, filterStr) {
+        /*
+         *filterMatch(findItem, filterStr, invert = false) {
+            var result;
             if(utils.isRegex(filterStr)) {
                 var rex = utils.buildRegex(filterStr);
-                return rex.test(findItem);
+                result = rex.test(findItem);
             } else {
-                return (findItem === filterStr);
+                result = (findItem === filterStr);
             }
+            if (invert) {
+                return !result;
+            }
+            return result;
         }
+        */
         
         getGroups(groupFilter = '/.*/') {
             console.log("getGroups('" + groupFilter + "')");
@@ -383,12 +415,12 @@ function PRTGAPIService(alertSrv, backendSrv) {
             });
         }
     
-        getItems(groupFilter, deviceFilter, sensorFilter, channelFilter) {
+        getItems(groupFilter, deviceFilter, sensorFilter, channelFilter, invertChannelFilter = false) {
             return this.getAllItems(groupFilter, deviceFilter, sensorFilter).then(items => {
-                //return this.filterQuery(items, channelFilter);
-                return _.filter(items, item => {
-                    return this.filterMatch(item.name, channelFilter);
-                });
+                return this.filterQuery(items, channelFilter, invertChannelFilter);
+                //return _.filter(items, item => {
+                //    return this.filterMatch(item.name, channelFilter, invertChannelFilter);
+                //});
             });
         }
         getItemsFromTarget(target) {
@@ -397,6 +429,14 @@ function PRTGAPIService(alertSrv, backendSrv) {
              * yes: Get groups(filter)
              * no: get device
              */
+            
+            if (target.options) {
+                if(target.options.invertChannelFilter) {
+                    return this.getItems(target.group.name, target.device.name, target.sensor.name, target.channel.name, true);
+                } else {
+                    return this.getItems(target.group.name, target.device.name, target.sensor.name, target.channel.name);
+                }
+            }
             return this.getItems(target.group.name, target.device.name, target.sensor.name, target.channel.name);
                 
         }

@@ -167,13 +167,13 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
             }, {
                 key: 'performGroupSuggestQuery',
                 value: function performGroupSuggestQuery() {
-                    var params = 'content=groups&columns=objid,group';
+                    var params = 'content=groups&columns=objid,group,probe,tags,active,status,message,priority';
                     return this.performPRTGAPIRequest('table.json', params);
                 }
             }, {
                 key: 'performDeviceSuggestQuery',
                 value: function performDeviceSuggestQuery(groupFilter) {
-                    var params = 'content=devices&columns=objid,device';
+                    var params = 'content=devices&columns=objid,device,group,probe,tags,active,status,message,priority';
                     if (groupFilter) {
                         params += ',group' + groupFilter;
                     }
@@ -182,59 +182,29 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
             }, {
                 key: 'performSensorSuggestQuery',
                 value: function performSensorSuggestQuery(deviceFilter) {
-                    var params = 'content=sensors&columns=objid,sensor,device,group' + deviceFilter;
-                    return this.performPRTGAPIRequest('table.json', params);
-                }
-            }, {
-                key: 'performChannelSuggestQuery',
-                value: function performChannelSuggestQuery(sensorId, device) {
-                    var _this2 = this;
-
-                    var arr = [{ "device": device }, { "sensor": sensorId }];
-                    var p = [];
-                    p = _.map(arr, function (a) {
-                        if (a.device && typeof a.device == "string") {
-                            return _this2.getDeviceByName(a.device);
-                        }
-
-                        if (a.sensor && typeof a.sensor == "string") {
-                            return _this2.getSensorByName(a.sensor, arr[0].device);
-                        }
-                    });
-
-                    return Promise.all(p).then(function (a) {
-                        var sensor = a[1][0].objid;
-                        var params = 'content=channels&columns=objid,channel,sensor,name&id=' + sensor;
-                        return _this2.performPRTGAPIRequest('table.json', params);
-                    });
-                }
-            }, {
-                key: 'getDeviceByName',
-                value: function getDeviceByName(name) {
-                    var params = 'content=devices&columns=objid,device&filter_device=' + name;
-                    return this.performPRTGAPIRequest('table.json', params);
-                }
-            }, {
-                key: 'getSensorByName',
-                value: function getSensorByName(name, device) {
-                    var params = 'content=sensors&columns=objid,device,sensor&filter_device=' + device;
-                    if (name !== '*') {
-                        params += '&filter_sensor=' + name;
-                    }
-                    return this.performPRTGAPIRequest('table.json', params);
-                }
-            }, {
-                key: 'getChannelByName',
-                value: function getChannelByName(name, sensor) {
-                    var params = 'content=channels&columns=objid,channel,channelid&id=' + sensor;
-                    if (name !== "*") {
-                        params = params.concat('&filter_channel=' + name);
-                    }
+                    var params = 'content=sensors&columns=objid,sensor,device,group,probe,tags,active,status,message,priority' + deviceFilter;
                     return this.performPRTGAPIRequest('table.json', params);
                 }
             }, {
                 key: 'filterQuery',
                 value: function filterQuery(items, queryStr) {
+                    var invert = arguments.length <= 2 || arguments[2] === undefined ? false : arguments[2];
+
+                    /**
+                     * group device sensor includes properties:
+                     * objid: num
+                     * sensor: Name
+                     * device: Device name
+                     * group: Group name
+                     * tags: comma separated
+                     * active: true|false
+                     * active_raw: -1 for true? wtf
+                     * status: Status text
+                     * status_raw: number
+                     * message: html message
+                     * message_raw: text message
+                     * priority: number 1-5
+                     */
                     var filterItems = [];
                     if (queryStr.match(/{[^{}]+}/g)) {
                         filterItems = _.trim(queryStr, '{}').split(',');
@@ -248,49 +218,49 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                             findItem = item.group;
                         } else if (item.device && !item.sensor) {
                             findItem = item.device;
-                        } else if (item.sensor) {
+                        } else if (item.sensor && !item.name) {
                             findItem = item.sensor;
-                        } else if (item.channel) {
+                        } else if (item.name) {
+                            //console.log("FILTER: item.name " + JSON.stringify(item,'',4));
                             findItem = item.name;
                         } else {
                             return false;
                         }
                         if (utils.isRegex(queryStr)) {
                             var rex = utils.buildRegex(queryStr);
-                            return rex.test(findItem);
+                            var result = rex.test(findItem);
+                            if (invert) {
+                                return !result;
+                            }
+                            return result;
                         }
                         if (filterItems.length === 0) {
                             return true;
                         }
+                        if (invert) {
+                            return !filterItems.includes(findItem);
+                        }
+                        //console.log("FILTERITEMS: " + JSON.stringify(filterItems,'',4));
+                        //console.log("FINDITEM: " + JSON.stringify(findItem,'',4));
                         return filterItems.includes(findItem);
                     });
                 }
             }, {
-                key: 'filterMatch',
-                value: function filterMatch(findItem, filterStr) {
-                    if (utils.isRegex(filterStr)) {
-                        var rex = utils.buildRegex(filterStr);
-                        return rex.test(findItem);
-                    } else {
-                        return findItem === filterStr;
-                    }
-                }
-            }, {
                 key: 'getGroups',
                 value: function getGroups() {
-                    var _this3 = this;
+                    var _this2 = this;
 
                     var groupFilter = arguments.length <= 0 || arguments[0] === undefined ? '/.*/' : arguments[0];
 
                     console.log("getGroups('" + groupFilter + "')");
                     return this.performGroupSuggestQuery().then(function (groups) {
-                        return _this3.filterQuery(groups, groupFilter);
+                        return _this2.filterQuery(groups, groupFilter);
                     });
                 }
             }, {
                 key: 'getHosts',
                 value: function getHosts() {
-                    var _this4 = this;
+                    var _this3 = this;
 
                     var groupFilter = arguments.length <= 0 || arguments[0] === undefined ? '/.*/' : arguments[0];
                     var hostFilter = arguments.length <= 1 || arguments[1] === undefined ? '/.*/' : arguments[1];
@@ -300,8 +270,8 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                         _.each(filteredGroups, function (group) {
                             filters.push('filter_group=' + group.group);
                         });
-                        return _this4.performDeviceSuggestQuery("&" + filters.join('&')).then(function (devices) {
-                            return _this4.filterQuery(devices, hostFilter);
+                        return _this3.performDeviceSuggestQuery("&" + filters.join('&')).then(function (devices) {
+                            return _this3.filterQuery(devices, hostFilter);
                         });
                     });
                 }
@@ -310,7 +280,7 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                 value: function getSensors() {
                     var groupFilter = arguments.length <= 0 || arguments[0] === undefined ? '/.*/' : arguments[0];
 
-                    var _this5 = this;
+                    var _this4 = this;
 
                     var hostFilter = arguments.length <= 1 || arguments[1] === undefined ? '/.*/' : arguments[1];
                     var sensorFilter = arguments.length <= 2 || arguments[2] === undefined ? '/.*/' : arguments[2];
@@ -320,8 +290,8 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                         _.each(hosts, function (host) {
                             filters.push('filter_device=' + host.device);
                         });
-                        return _this5.performSensorSuggestQuery("&" + filters.join('&')).then(function (sensors) {
-                            return _this5.filterQuery(sensors, sensorFilter);
+                        return _this4.performSensorSuggestQuery("&" + filters.join('&')).then(function (sensors) {
+                            return _this4.filterQuery(sensors, sensorFilter);
                         });
                     });
                 }
@@ -330,7 +300,7 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                 value: function getAllItems() {
                     var groupFilter = arguments.length <= 0 || arguments[0] === undefined ? '/.*/' : arguments[0];
 
-                    var _this6 = this;
+                    var _this5 = this;
 
                     var hostFilter = arguments.length <= 1 || arguments[1] === undefined ? '/.*/' : arguments[1];
                     var sensorFilter = arguments.length <= 2 || arguments[2] === undefined ? '/.*/' : arguments[2];
@@ -345,7 +315,7 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                          */
                         var promises = _.map(sensors, function (sensor) {
                             var params = 'content=channels&columns=sensor,name&id=' + sensor.objid;
-                            return _this6.performPRTGAPIRequest('table.json', params).then(function (channels) {
+                            return _this5.performPRTGAPIRequest('table.json', params).then(function (channels) {
                                 /**
                                  * Create an object that contains all of the information necessary to query this metric.
                                  * This information will be used at render time to group the datapoints and name them.
@@ -366,13 +336,15 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
             }, {
                 key: 'getItems',
                 value: function getItems(groupFilter, deviceFilter, sensorFilter, channelFilter) {
-                    var _this7 = this;
+                    var _this6 = this;
+
+                    var invertChannelFilter = arguments.length <= 4 || arguments[4] === undefined ? false : arguments[4];
 
                     return this.getAllItems(groupFilter, deviceFilter, sensorFilter).then(function (items) {
-                        //return this.filterQuery(items, channelFilter);
-                        return _.filter(items, function (item) {
-                            return _this7.filterMatch(item.name, channelFilter);
-                        });
+                        return _this6.filterQuery(items, channelFilter, invertChannelFilter);
+                        //return _.filter(items, item => {
+                        //    return this.filterMatch(item.name, channelFilter, invertChannelFilter);
+                        //});
                     });
                 }
             }, {
@@ -383,6 +355,14 @@ System.register(['angular', 'lodash', './utils', './xmlparser'], function (_expo
                      * yes: Get groups(filter)
                      * no: get device
                      */
+
+                    if (target.options) {
+                        if (target.options.invertChannelFilter) {
+                            return this.getItems(target.group.name, target.device.name, target.sensor.name, target.channel.name, true);
+                        } else {
+                            return this.getItems(target.group.name, target.device.name, target.sensor.name, target.channel.name);
+                        }
+                    }
                     return this.getItems(target.group.name, target.device.name, target.sensor.name, target.channel.name);
                 }
             }, {

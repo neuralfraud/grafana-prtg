@@ -87,7 +87,11 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
             this.templateSrv = templateSrv;
             this.targetLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
             var scopeDefaults = {
-              metric: {},
+
+              metric: {
+                propertyList: [{ name: "tags", visible_name: "Tags" }, { name: "status", visible_name: "Status" }, { name: "message_raw", visible_name: "Message" }, { name: "priority", visible_name: "Priority" }],
+                textValueFromList: [{ name: "group", visible_name: "Group" }, { name: "device", visible_name: "Device" }, { name: "sensor", visible_name: "Sensor" }]
+              },
               oldTarget: _.cloneDeep(this.target)
             };
             _.defaults(this, scopeDefaults);
@@ -98,11 +102,23 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
               device: { name: "" },
               sensor: { name: "" },
               channel: { name: "" },
+              raw: { uri: "", queryString: "" },
               functions: [],
-              options: {}
+              options: {
+                mode: {
+                  name: "Metrics", value: 1,
+                  filterProperty: {},
+                  textValueFrom: {}
+                }
+              }
             };
             _.defaults(target, targetDefaults);
 
+            this.editorModes = {
+              1: { name: "Metrics", value: 1 },
+              2: { name: "Text", value: 2 },
+              3: { name: "Raw", value: 3 }
+            };
             this.updateGroupList();
             this.updateDeviceList();
             this.updateSensorList();
@@ -115,16 +131,20 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
             this.getDeviceNames = _.partial(getMetricNames, this, 'deviceList');
             this.getSensorNames = _.partial(getMetricNames, this, 'sensorList');
             this.getChannelNames = _.partial(getMetricNames, this, 'channelList');
+            this.getTextProperties = _.partial(getMetricNames, this, 'propertyList');
           };
 
           _this.init();
           return _this;
         }
 
-        // take action on target update and refresh the model? whatever the hell angular actually does is beyond me... 
-
-
         _createClass(PRTGQueryController, [{
+          key: 'switchEditorMode',
+          value: function switchEditorMode(mode) {
+            this.target.options.mode = mode;
+            this.targetChange();
+          }
+        }, {
           key: 'targetChange',
           value: function targetChange() {
             var newTarget = _.cloneDeep(this.target);
@@ -227,14 +247,9 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
 
             var groupFilter = this.templateSrv.replace(this.target.group.name);
             var deviceFilter = this.templateSrv.replace(this.target.device.name);
-            //console.log("deviceFilter: " + deviceFilter);
             this.metric.sensorList = [{ name: '*', visible_name: 'All' }];
             this.addTemplatedVariables(this.metric.sensorList);
-            //I know this is grossly inefficient.
-            //console.log('updateSensorList: getSensors(' + this.targetItems.group + ', ' + this.targetItems.device + ', ' + this.targetItems.sensor +')');
-            //console.log("updateSensorList: getSensors(" + groupFilter + ", " + deviceFilter + ", /.*/");
             this.datasource.prtgAPI.getSensors(groupFilter, deviceFilter, '/.*/').then(function (sensors) {
-              //console.log("updateSensorList: devices : " + JSON.stringify(devices,'',4));
               _.map(sensors, function (sensor) {
                 _this5.metric.sensorList.push({ name: sensor.sensor, visible_name: sensor.sensor });
               });
@@ -280,12 +295,16 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
           }
         }, {
           key: 'isRegex',
-          value: function isRegex(str) {
+          value: function isRegex() {
+            var str = arguments.length <= 0 || arguments[0] === undefined ? '' : arguments[0];
+
             return utils.isRegex(str);
           }
         }, {
           key: 'isVariable',
-          value: function isVariable(str) {
+          value: function isVariable() {
+            var str = arguments.length <= 0 || arguments[0] === undefined ? '' : arguments[0];
+
             return utils.isTemplateVariable(str);
           }
         }]);

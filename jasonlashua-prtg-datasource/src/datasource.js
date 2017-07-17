@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import * as dateMath from 'app/core/utils/datemath';
 import './PRTGAPIService';
+import * as utils from './utils';
 
 class PRTGDataSource {
     
@@ -63,6 +64,10 @@ class PRTGDataSource {
                 if (target.hide || !target.group || !target.device || !target.channel || !target.sensor) {
                     return [];
                 }
+                //play nice with legacy dashboards, add options property
+                if (!target.options) {
+                    target.options = {};
+                }
                 target.group.name    = this.templateSrv.replace(target.group.name, options.scopedVars);
                 target.device.name   = this.templateSrv.replace(target.device.name, options.scopedVars);
                 target.sensor.name  = this.templateSrv.replace(target.sensor.name, options.scopedVars);
@@ -71,11 +76,73 @@ class PRTGDataSource {
                 if (target.device.name == '*') { target.device.name = "/.*/";}
                 if (target.sensor.name == '*') { target.sensor.name = "/.*/";}
                 if (target.channel.name == '*') { target.channel.name = "/.*/";}
+                
+                if (target.options.mode.name == "Metrics") {
+                    return this.queryMetrics(target, from, to);
+                } else if (target.options.mode.name == "Text") {
+                    console.log("Query TEXT");
+                    return this.queryText(target, from, to);
+                } else if (target.options.mode.name == "Raw") {
+                    return this.queryRaw(target, from, to);
+                }
+            });
+            
+            return Promise.all(_.flatten(promises))
+                .then(results => {
+                    return {data: _.flatten(results)};
+                });
+        }
+        
+        queryRaw(target, from, to) {
+            return this.prtgAPI.performPRTGAPIRequest(target.raw.uri, target.raw.queryString).then(rawData => {
+                return {target: 'blah', datapoints: [rawData], type: 'docs'};
+            });
+        }
+        queryText(target, from, to) {
+            /**
+             * Get items isn't required
+             * case value from: sensor group or device
+             * -> perform query, then filter.
+             * existing getDevices getSensors getGroups can be used since they include all properties
+             */
+            var textPromise;
+            console.log("text query type: " + target.options.textValueFrom.name);
+            
+            if (target.options.textValueFrom.name == "group") {
+                textPromise = this.prtgAPI.getGroups(target.group.name);
+            } else if (target.options.textValueFrom.name == "device") {
+                textPromise = this.prtgAPI.getHosts(target.group.name, target.device.name); 
+            } else if (target.options.textValueFrom.name == "sensor") {
+                textPromise = this.prtgAPI.getSensors(target.group.name, target.device.name, target.sensor.name);
+            } else {
+                return Promise.resolve([]);
+            }
+
+            if (!target.options.textFilter) {
+                target.options.textFilter = '/.*/';
+            }
+                
+            
+            return textPromise.then(items => {
+                var filtered = _.filter(items, item => {
+                    return utils.filterMatch(item.message_raw, target.options.textFilter);
+                });
+                return _.map(filtered, item => {
+                    console.log(JSON.stringify(item,'',4));
+                    var alias = item[target.options.textValueFrom.name];
+                    console.log("alias: " + alias);
+                    console.log("value: " + item.message_raw);
+                    var decodeText = document.createElement("textarea");
+                    decodeText.innerHTML = item.message_raw;
+                    return {target: alias, datapoints: [[decodeText.value, Date.now()]]};
+                });
+            });
+        }
+        
+        queryMetrics(target, from, to) {
                 return this.prtgAPI.getItemsFromTarget(target)
                 .then(items => {
-                   //console.log('query: items: ' + JSON.stringify(items,'',4));
                     var devices = _.uniq(_.map(items, 'device'));
-                    //console.log('devices: ' + JSON.stringify(items,'',4));
                     var historyPromise = _.map(items, item => {
                         return this.prtgAPI.getItemHistory(item.sensor, item.name, from, to)
                         .then(history => {
@@ -96,14 +163,7 @@ class PRTGDataSource {
                     });
                     return Promise.all(historyPromise);
                 });
-            });
-            
-            return Promise.all(_.flatten(promises))
-                .then(results => {
-                    return {data: _.flatten(results)};
-                });
         }
-        
        annotationQuery (options) {
             var from = Math.ceil(dateMath.parse(options.range.from) / 1000);
             var to = Math.ceil(dateMath.parse(options.range.to) / 1000);

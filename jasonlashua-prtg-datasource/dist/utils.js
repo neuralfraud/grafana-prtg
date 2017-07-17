@@ -39,6 +39,24 @@ System.register([], function (_export, _context) {
 
   _export("escapeRegex", escapeRegex);
 
+  function filterMatch(findItem, filterStr) {
+    var invert = arguments.length <= 2 || arguments[2] === undefined ? false : arguments[2];
+
+    var result;
+    if (isRegex(filterStr)) {
+      var rex = buildRegex(filterStr);
+      result = rex.test(findItem);
+    } else {
+      result = findItem === filterStr;
+    }
+    if (invert) {
+      return !result;
+    }
+    return result;
+  }
+
+  _export("filterMatch", filterMatch);
+
   return {
     setters: [],
     execute: function () {

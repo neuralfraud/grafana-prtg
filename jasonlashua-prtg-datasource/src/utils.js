@@ -29,3 +29,17 @@ export function buildRegex(str) {
 export function escapeRegex(value) {
   return value.replace(/[\\^$*+?.()|[\]{}\/]/g, '\\$&');
 }
+
+export function filterMatch(findItem, filterStr, invert = false) {
+  var result;
+  if(isRegex(filterStr)) {
+      var rex = buildRegex(filterStr);
+      result = rex.test(findItem);
+  } else {
+      result = (findItem === filterStr);
+  }
+  if (invert) {
+      return !result;
+  }
+  return result;
+}
