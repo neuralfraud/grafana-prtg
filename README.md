@@ -21,12 +21,15 @@ This version contains many great enhancements and hopefully addresses some of th
 
 * Full regex support! Regular expressions can be used to create powerful queries that return many items ...in a single query!
 * Multiple-value variables support! For instance, if a template variable "$groups" is selected, and the that variable contains two groups, the "device" query is filtered accordingly.
+* Support for text and other PRTG properties, including tags, active, status, messages, priority, and more!
+* Support for raw JSON (for creating custom tables with the table panel)
 
 ### Other
 
-When using a single query that returns data from multiple hosts, the alias for each item includes the hostname. However, this does not work with multiple individual host queries, i.e., it's a bug.
+It is now possible to create table panels and other useful displays using PRTG object properties and text!
 
-Also I do not ignore the issues - I really only get a few days every few months to work on this, unfortunately. I will continue addressing all issues that I can. 
+![Grafana](https://neuralfraud.github.io/textPropertyDash.png)
+
 **THANK YOU FOR USING THIS PLUGIN!**
 
 
