@@ -1,7 +1,7 @@
 {
   "name": "grafana-prtg",
   "private": false,
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "PRTG Datasource plugin for Grafana",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -11,7 +11,7 @@
     "url": "git+https://github.com/neuralfraud/grafana-prtg.git"
   },
   "author": "Jason Lashua",
-  "license": "",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/neuralfraud/grafana-prtg/issues"
   },

@@ -19,10 +19,10 @@
  *
  */
 export class XMLXform {
-    constructor(method, xmlString) {
+  constructor(method, xmlString) {
     
-        this.xml = undefined;
-        this.xslt = `<?xml version="1.0" encoding="UTF-8" ?>
+    this.xml = undefined;
+    this.xslt = `<?xml version="1.0" encoding="UTF-8" ?>
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     <!--<xsl:output method="text" encoding="utf-8"/>-->
 
@@ -59,7 +59,7 @@ export class XMLXform {
 </xsl:stylesheet>
 `;
 
-        this.xslt2 = `<?xml version="1.0" encoding="UTF-8" ?>
+    this.xslt2 = `<?xml version="1.0" encoding="UTF-8" ?>
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     <xsl:output method="text" encoding="utf-8"/>
  
@@ -131,22 +131,20 @@ export class XMLXform {
 </xsl:stylesheet>
 `;
 
-        var json,newxml;
-        if (window.DOMParser) {
-            var parser = new DOMParser();  
-            this.xml = parser.parseFromString(xmlString, "application/xml");
-            this.xslt = parser.parseFromString(this.xslt, "application/xml");
-            this.xslt2 = parser.parseFromString(this.xslt2, "application/xml");
-        }
-        var xsltProcessor = new XSLTProcessor();
-            xsltProcessor.importStylesheet(this.xslt);
-            newxml = xsltProcessor.transformToDocument(this.xml);
-        // Using a separate XSLTProcessor instance resolves issue with Firefox.
-        var xsltProcessor2 = new XSLTProcessor();
-            xsltProcessor2.importStylesheet(this.xslt2);
-            json = xsltProcessor2.transformToFragment(newxml, document).textContent;
-        return JSON.parse(json);
+    if (window.DOMParser) {
+      const parser = new DOMParser();  
+      this.xml = parser.parseFromString(xmlString, "application/xml");
+      this.xslt = parser.parseFromString(this.xslt, "application/xml");
+      this.xslt2 = parser.parseFromString(this.xslt2, "application/xml");
     }
-
+    const xsltProcessor = new XSLTProcessor();
+    xsltProcessor.importStylesheet(this.xslt);
+    const newxml = xsltProcessor.transformToDocument(this.xml);
+    // Using a separate XSLTProcessor instance resolves issue with Firefox.
+    const xsltProcessor2 = new XSLTProcessor();
+    xsltProcessor2.importStylesheet(this.xslt2);
+    const json = xsltProcessor2.transformToFragment(newxml, document).textContent;
+    return JSON.parse(json);
+  }
 }
 

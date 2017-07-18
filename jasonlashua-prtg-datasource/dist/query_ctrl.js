@@ -1,9 +1,9 @@
 'use strict';
 
-System.register(['app/plugins/sdk', 'lodash'], function (_export, _context) {
+System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css!'], function (_export, _context) {
   "use strict";
 
-  var QueryCtrl, _, _createClass, PRTGQueryController;
+  var QueryCtrl, _, utils, _createClass, PRTGQueryController;
 
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -44,7 +44,9 @@ System.register(['app/plugins/sdk', 'lodash'], function (_export, _context) {
       QueryCtrl = _appPluginsSdk.QueryCtrl;
     }, function (_lodash) {
       _ = _lodash.default;
-    }],
+    }, function (_utils) {
+      utils = _utils;
+    }, function (_cssQueryEditorCss) {}],
     execute: function () {
       _createClass = function () {
         function defineProperties(target, props) {
@@ -67,21 +69,56 @@ System.register(['app/plugins/sdk', 'lodash'], function (_export, _context) {
       _export('PRTGQueryController', PRTGQueryController = function (_QueryCtrl) {
         _inherits(PRTGQueryController, _QueryCtrl);
 
-        function PRTGQueryController($scope, $injector, $sce, $q, templateSrv) {
+        function PRTGQueryController($scope, $injector, $rootScope, $sce, templateSrv) {
           _classCallCheck(this, PRTGQueryController);
 
           var _this = _possibleConstructorReturn(this, (PRTGQueryController.__proto__ || Object.getPrototypeOf(PRTGQueryController)).call(this, $scope, $injector));
+
+          $scope.$on('typeahead-updated', function () {
+            _this.targetChange();
+          });
+
+          $rootScope.$on('template-variable-value-updated', function () {
+            return _this.variableChanged();
+          });
 
           _this.init = function () {
             var target = this.target;
             this.templateSrv = templateSrv;
             this.targetLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
             var scopeDefaults = {
-              metric: {},
+              metric: {
+                propertyList: [{ name: "tags", visible_name: "Tags" }, { name: "active", visible_name: "Active" }, { name: "status", visible_name: "Status" }, { name: "status_raw", visible_name: "Status (raw)" }, { name: "message_raw", visible_name: "Message" }, { name: "priority", visible_name: "Priority" }],
+                textValueFromList: [{ name: "group", visible_name: "Group" }, { name: "device", visible_name: "Device" }, { name: "sensor", visible_name: "Sensor" }]
+              },
               oldTarget: _.cloneDeep(this.target)
             };
             _.defaults(this, scopeDefaults);
 
+            // Load default values
+            var targetDefaults = {
+              group: { name: "" },
+              device: { name: "" },
+              sensor: { name: "" },
+              channel: { name: "" },
+              raw: { uri: "", queryString: "" },
+              functions: [],
+              options: {
+                mode: {
+                  name: "Metrics", value: 1,
+                  filterProperty: {},
+                  textValueFrom: {},
+                  textProperty: {}
+                }
+              }
+            };
+            _.defaults(target, targetDefaults);
+
+            this.editorModes = {
+              1: { name: "Metrics", value: 1 },
+              2: { name: "Text", value: 2 },
+              3: { name: "Raw", value: 3 }
+            };
             this.updateGroupList();
             this.updateDeviceList();
             this.updateSensorList();
@@ -94,20 +131,24 @@ System.register(['app/plugins/sdk', 'lodash'], function (_export, _context) {
             this.getDeviceNames = _.partial(getMetricNames, this, 'deviceList');
             this.getSensorNames = _.partial(getMetricNames, this, 'sensorList');
             this.getChannelNames = _.partial(getMetricNames, this, 'channelList');
+            this.getTextProperties = _.partial(getMetricNames, this, 'propertyList');
           };
+
           _this.init();
           return _this;
         }
 
         /**
-        * Alias is comprised of the device name, sensor and channel, e.g., FILESERV1: DNS Response Time.
-        */
+         * Set the target.options.mode property to the corresponding value and refresh.
+         * @param {*} mode 
+         */
 
 
         _createClass(PRTGQueryController, [{
-          key: 'setTargetAlias',
-          value: function setTargetAlias() {
-            this.target.alias = this.target.device.name + ": " + this.target.sensor.name + " " + this.target.channel.name;
+          key: 'switchEditorMode',
+          value: function switchEditorMode(mode) {
+            this.target.options.mode = mode;
+            this.targetChange();
           }
         }, {
           key: 'targetChange',
@@ -119,93 +160,120 @@ System.register(['app/plugins/sdk', 'lodash'], function (_export, _context) {
             }
           }
         }, {
+          key: 'variableChanged',
+          value: function variableChanged() {
+            var _this2 = this;
+
+            _.some(['group', 'device', 'sensor'], function (item) {
+              if (_this2.target[item].name.indexOf('$') > 0) {
+                _this2.targetChange();
+              }
+            });
+          }
+        }, {
           key: 'selectGroup',
           value: function selectGroup() {
-            this.updateDeviceList();
             this.targetChange();
+            this.updateDeviceList();
           }
         }, {
           key: 'selectDevice',
           value: function selectDevice() {
-            this.updateSensorList();
             this.targetChange();
+            this.updateSensorList();
           }
         }, {
           key: 'selectSensor',
           value: function selectSensor() {
-            this.updateChannelList();
             this.targetChange();
+            this.updateChannelList();
           }
         }, {
           key: 'selectChannel',
           value: function selectChannel() {
-            this.setTargetAlias();
             this.targetChange();
+          }
+        }, {
+          key: 'onQueryOptionChange',
+          value: function onQueryOptionChange() {
+            this.queryOptionsText = this.renderQueryOptionsText();
+            this.targetChange();
+          }
+        }, {
+          key: 'renderQueryOptionsText',
+          value: function renderQueryOptionsText() {
+            var optionsMap = {};
+            var options = [];
+            _.forOwn(this.target.options, function (value, key) {
+              if (value) {
+                if (value === true) {
+                  // Show only option name (if enabled) for boolean options
+                  options.push(optionsMap[key]);
+                } else {
+                  // Show "option = value" for another options
+                  options.push(optionsMap[key] + " = " + value);
+                }
+              }
+            });
+            return "Options: " + options.join(', ');
           }
         }, {
           key: 'updateGroupList',
           value: function updateGroupList() {
-            var _this2 = this;
+            var _this3 = this;
 
             this.metric.groupList = [{ name: '*', visible_name: 'All' }];
             this.addTemplatedVariables(this.metric.groupList);
             this.datasource.prtgAPI.performGroupSuggestQuery().then(function (groups) {
               _.map(groups, function (group) {
-                _this2.metric.groupList.push({ name: group.group, visible_name: group.group });
+                _this3.metric.groupList.push({ name: group.group, visible_name: group.group });
               });
             });
           }
         }, {
           key: 'updateDeviceList',
           value: function updateDeviceList() {
-            var _this3 = this;
+            var _this4 = this;
 
-            var group;
+            var groupFilter = this.templateSrv.replace(this.target.group.name);
             this.metric.deviceList = [{ name: '*', visible_name: 'All' }];
             this.addTemplatedVariables(this.metric.deviceList);
-            if (this.target.group) {
-              group = this.target.group.name || undefined;
-              group = this.templateSrv.replace(group);
-            }
-            this.datasource.prtgAPI.performDeviceSuggestQuery(group).then(function (devices) {
+            this.datasource.prtgAPI.getHosts(groupFilter, '/.*/').then(function (devices) {
               _.map(devices, function (device) {
-                _this3.metric.deviceList.push({ name: device.device, visible_name: device.device });
+                _this4.metric.deviceList.push({ name: device.device, visible_name: device.device });
               });
             });
           }
         }, {
           key: 'updateSensorList',
           value: function updateSensorList() {
-            var _this4 = this;
+            var _this5 = this;
 
-            var device;
+            var groupFilter = this.templateSrv.replace(this.target.group.name);
+            var deviceFilter = this.templateSrv.replace(this.target.device.name);
             this.metric.sensorList = [{ name: '*', visible_name: 'All' }];
             this.addTemplatedVariables(this.metric.sensorList);
-            if (this.target.device) {
-              device = this.target.device.name || undefined;
-              device = this.templateSrv.replace(device);
-            }
-            this.datasource.prtgAPI.performSensorSuggestQuery(device).then(function (sensors) {
+            this.datasource.prtgAPI.getSensors(groupFilter, deviceFilter, '/.*/').then(function (sensors) {
               _.map(sensors, function (sensor) {
-                _this4.metric.sensorList.push({ name: sensor.sensor, visible_name: sensor.sensor });
+                _this5.metric.sensorList.push({ name: sensor.sensor, visible_name: sensor.sensor });
               });
             });
           }
         }, {
           key: 'updateChannelList',
           value: function updateChannelList() {
-            var _this5 = this;
+            var _this6 = this;
 
-            var sensor, device;
-            this.metric.channelList = [{ name: '*', visible_name: 'All' }, { name: '!', visible_name: 'Last Message' }];
+            var groupFilter = this.templateSrv.replace(this.target.group.name);
+            var deviceFilter = this.templateSrv.replace(this.target.device.name);
+            var sensorFilter = this.templateSrv.replace(this.target.sensor.name);
+            this.metric.channelList = [];
             this.addTemplatedVariables(this.metric.channelList);
             if (this.target.sensor) {
-              sensor = this.target.sensor.name;
-              sensor = this.templateSrv.replace(sensor);
-              device = this.templateSrv.replace(this.target.device.name);
-              this.datasource.prtgAPI.performChannelSuggestQuery(sensor, device).then(function (channels) {
+              //this.datasource.prtgAPI.performChannelSuggestQuery(sensor, device).then(channels => {
+              this.datasource.prtgAPI.getAllItems(groupFilter, deviceFilter, sensorFilter).then(function (channels) {
                 _.map(channels, function (channel) {
-                  _this5.metric.channelList.push({ name: channel.name, visible_name: channel.name });
+                  _this6.metric.channelList.push({ name: channel.name, visible_name: channel.name });
                 });
               });
             }
