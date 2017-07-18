@@ -87,7 +87,6 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
             this.templateSrv = templateSrv;
             this.targetLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
             var scopeDefaults = {
-
               metric: {
                 propertyList: [{ name: "tags", visible_name: "Tags" }, { name: "active", visible_name: "Active" }, { name: "status", visible_name: "Status" }, { name: "status_raw", visible_name: "Status (raw)" }, { name: "message_raw", visible_name: "Message" }, { name: "priority", visible_name: "Priority" }],
                 textValueFromList: [{ name: "group", visible_name: "Group" }, { name: "device", visible_name: "Device" }, { name: "sensor", visible_name: "Sensor" }]
@@ -138,6 +137,12 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
           _this.init();
           return _this;
         }
+
+        /**
+         * Set the target.options.mode property to the corresponding value and refresh.
+         * @param {*} mode 
+         */
+
 
         _createClass(PRTGQueryController, [{
           key: 'switchEditorMode',
@@ -231,10 +236,8 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
             var _this4 = this;
 
             var groupFilter = this.templateSrv.replace(this.target.group.name);
-            //console.log("groupFilter: " + groupFilter);
             this.metric.deviceList = [{ name: '*', visible_name: 'All' }];
             this.addTemplatedVariables(this.metric.deviceList);
-
             this.datasource.prtgAPI.getHosts(groupFilter, '/.*/').then(function (devices) {
               _.map(devices, function (device) {
                 _this4.metric.deviceList.push({ name: device.device, visible_name: device.device });
@@ -264,7 +267,7 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
             var groupFilter = this.templateSrv.replace(this.target.group.name);
             var deviceFilter = this.templateSrv.replace(this.target.device.name);
             var sensorFilter = this.templateSrv.replace(this.target.sensor.name);
-            this.metric.channelList = [{ name: 'status', visible_name: 'Last Message' }, { name: 'messages', visible_name: 'Messages' }];
+            this.metric.channelList = [];
             this.addTemplatedVariables(this.metric.channelList);
             if (this.target.sensor) {
               //this.datasource.prtgAPI.performChannelSuggestQuery(sensor, device).then(channels => {
@@ -293,20 +296,6 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
               errs = 'Not defined';
             }
             return errs;
-          }
-        }, {
-          key: 'isRegex',
-          value: function isRegex() {
-            var str = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
-
-            return utils.isRegex(str);
-          }
-        }, {
-          key: 'isVariable',
-          value: function isVariable() {
-            var str = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
-
-            return utils.isTemplateVariable(str);
           }
         }]);
 

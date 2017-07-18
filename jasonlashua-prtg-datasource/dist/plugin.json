@@ -8,7 +8,7 @@
   "annotations": true,
   
   "info": {
-    "description": "PRTG Datasource plugin for Grafana 3.x",
+    "description": "PRTG Datasource plugin for Grafana",
     "author": {
       "name": "Jason Lashua",
       "url": "https://github.com/neuralfraud"
@@ -21,6 +21,6 @@
       {"name": "GitHub", "url": "https://github.com/neuralfraud/grafana-prtg"}
     ],
     "version": "4.0.0",
-    "updated": "2017-07-14"
+    "updated": "2017-07-17"
   }
 }

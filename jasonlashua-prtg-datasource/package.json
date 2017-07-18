@@ -11,7 +11,7 @@
     "url": "git+https://github.com/neuralfraud/grafana-prtg.git"
   },
   "author": "Jason Lashua",
-  "license": "Apache 2.0",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/neuralfraud/grafana-prtg/issues"
   },

@@ -1,5 +1,5 @@
 /**
- * Grafana Datasource Plugin for PRTG API Interface (ALPHA)
+ * Grafana Datasource Plugin for PRTG API Interface
  * Query Control Interface
  * 20170715 Jason Lashua
  *
@@ -10,10 +10,6 @@ import {QueryCtrl} from 'app/plugins/sdk';
 import _ from 'lodash';
 import * as utils from './utils';
 import './css/query-editor.css!';
-
-//zabbix style function editor, create angular directives to provide flyout menu to select functions
-//import './add-metric-function.directive';
-//import './metric-function-editor.directive';
 
 export class PRTGQueryController extends QueryCtrl {
 
@@ -26,12 +22,10 @@ export class PRTGQueryController extends QueryCtrl {
     $rootScope.$on('template-variable-value-updated', () => this.variableChanged());
     
     this.init = function() {
-      var target = this.target;
+      const target = this.target;
       this.templateSrv = templateSrv;
       this.targetLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      var scopeDefaults = {
-                    
-                
+      const scopeDefaults = {
         metric:{
           propertyList: [
             {name: "tags", visible_name: "Tags"},
@@ -52,7 +46,7 @@ export class PRTGQueryController extends QueryCtrl {
       _.defaults(this, scopeDefaults);
       
       // Load default values
-      var targetDefaults = {
+      const targetDefaults = {
         group: { name: "" },
         device: { name: "" },
         sensor: { name: "" },
@@ -93,27 +87,35 @@ export class PRTGQueryController extends QueryCtrl {
     this.init();
   }
   
+  /**
+   * Set the target.options.mode property to the corresponding value and refresh.
+   * @param {*} mode 
+   */
   switchEditorMode(mode) {
     this.target.options.mode = mode;
     this.targetChange();
   }
  
-  // take action on target update and refresh the model? whatever the hell angular actually does is beyond me... 
+  /**
+   * Update the target model and refresh the panel controller
+   */
   targetChange() {
-    var newTarget = _.cloneDeep(this.target);
+    const newTarget = _.cloneDeep(this.target);
     if (!_.isEqual(this.oldTarget, this.target)) {
       this.oldTarget = newTarget;
       this.panelCtrl.refresh();
     }
   }
   
+  /**
+   * Refresh the controller when a template variable changes.
+   */
   variableChanged() {
-    
     _.some(['group','device','sensor'], item => {
-        if(this.target[item].name.indexOf('$') > 0) {
-            this.targetChange();
-          } 
-      });
+      if(this.target[item].name.indexOf('$') > 0) {
+        this.targetChange();
+      } 
+    });
   }
 
   /*
@@ -146,8 +148,8 @@ export class PRTGQueryController extends QueryCtrl {
   }
 
   renderQueryOptionsText() {
-    var optionsMap = {};
-    var options = [];
+    const optionsMap = {};
+    const options = [];
     _.forOwn(this.target.options, (value, key) => {
       if (value) {
         if (value === true) {
@@ -162,9 +164,9 @@ export class PRTGQueryController extends QueryCtrl {
     return "Options: " + options.join(', ');
   }
   
-  /*
-   * Update the content of each list
-  */   
+  /**
+   * Retrieve groups and populate list
+   */
   updateGroupList() {
     this.metric.groupList = [{name: '*', visible_name: 'All'}];
     this.addTemplatedVariables(this.metric.groupList);
@@ -175,12 +177,13 @@ export class PRTGQueryController extends QueryCtrl {
     });
   }
   
+  /**
+   * Retrive devices and populate list
+   */
   updateDeviceList() {
-    var groupFilter = this.templateSrv.replace(this.target.group.name);
-   //console.log("groupFilter: " + groupFilter);
+    const groupFilter = this.templateSrv.replace(this.target.group.name);
     this.metric.deviceList = [{name: '*', visible_name: 'All'}];
     this.addTemplatedVariables(this.metric.deviceList);
-    
     this.datasource.prtgAPI.getHosts(groupFilter, '/.*/').then(devices => {
       _.map(devices, device => {
         this.metric.deviceList.push({name: device.device, visible_name: device.device});
@@ -188,9 +191,12 @@ export class PRTGQueryController extends QueryCtrl {
     });
   }
 
+  /**
+   * Retrieve sensors and populate list
+   */
   updateSensorList() {
-    var groupFilter = this.templateSrv.replace(this.target.group.name);
-    var deviceFilter = this.templateSrv.replace(this.target.device.name);
+    const groupFilter = this.templateSrv.replace(this.target.group.name);
+    const deviceFilter = this.templateSrv.replace(this.target.device.name);
     this.metric.sensorList = [{name: '*', visible_name: 'All'}];
     this.addTemplatedVariables(this.metric.sensorList);
     this.datasource.prtgAPI.getSensors(groupFilter, deviceFilter, '/.*/').then(sensors => {
@@ -200,11 +206,14 @@ export class PRTGQueryController extends QueryCtrl {
     });
   }
 
+  /**
+   * Retrieve channels and populate list
+   */
   updateChannelList() {
-    var groupFilter = this.templateSrv.replace(this.target.group.name);
-    var deviceFilter = this.templateSrv.replace(this.target.device.name);
-    var sensorFilter = this.templateSrv.replace(this.target.sensor.name);
-    this.metric.channelList = [{name: 'status', visible_name: 'Last Message'},{name: 'messages', visible_name: 'Messages'}];
+    const groupFilter = this.templateSrv.replace(this.target.group.name);
+    const deviceFilter = this.templateSrv.replace(this.target.device.name);
+    const sensorFilter = this.templateSrv.replace(this.target.sensor.name);
+    this.metric.channelList = [];
     this.addTemplatedVariables(this.metric.channelList);
     if (this.target.sensor) {
       //this.datasource.prtgAPI.performChannelSuggestQuery(sensor, device).then(channels => {
@@ -232,20 +241,12 @@ export class PRTGQueryController extends QueryCtrl {
 
   // just validate the target exists for now.
   validateTarget(target) {
-    var errs = {};
+    let errs = {};
     if (!target) {
       errs = 'Not defined';
     }
     return errs;
-  }
-  
-  isRegex(str = '') {
-    return utils.isRegex(str);
-  }
-
-  isVariable(str = '') {
-    return utils.isTemplateVariable(str);
-  }  
+  } 
 }
 
 // Set templateUrl as static property

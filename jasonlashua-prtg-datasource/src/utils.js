@@ -1,5 +1,7 @@
 /**
  * Global helper functions
+ * 
+ * mostly copied from alexanderzobnin-zabbix-app - thanks!
  */
 
 // Pattern for testing regex
@@ -16,30 +18,29 @@ export function isTemplateVariable(str) {
   return false;
 }
 
-//STOLEN! From Alex Zobnin, who is evidently a much better programmer than I (he probably does it for a living)
 export function buildRegex(str) {
-  var matches = str.match(regexPattern);
-  var pattern = matches[1];
-  var flags = matches[2] !== "" ? matches[2] : undefined;
+  const matches = str.match(regexPattern);
+  const pattern = matches[1];
+  const flags = matches[2] !== "" ? matches[2] : undefined;
   return new RegExp(pattern, flags);
 }
 
 // Need for template variables replace
 // From Grafana's templateSrv.js
 export function escapeRegex(value) {
-  return value.replace(/[\\^$*+?.()|[\]{}\/]/g, '\\$&');
+  return value.replace(/[\\^$*+?.()|[\]{}\/]/g, "\\$&");
 }
 
 export function filterMatch(findItem, filterStr, invert = false) {
-  var result;
-  if(isRegex(filterStr)) {
-      var rex = buildRegex(filterStr);
-      result = rex.test(findItem);
+  let result;
+  if (isRegex(filterStr)) {
+    const rex = buildRegex(filterStr);
+    result = rex.test(findItem);
   } else {
-      result = (findItem === filterStr);
+    result = findItem === filterStr;
   }
   if (invert) {
-      return !result;
+    return !result;
   }
   return result;
 }
