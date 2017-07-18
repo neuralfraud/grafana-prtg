@@ -17,8 +17,6 @@ System.register([], function (_export, _context) {
     return false;
   }
 
-  //STOLEN! From Alex Zobnin, who is evidently a much better programmer than I (he probably does it for a living)
-
   _export("isTemplateVariable", isTemplateVariable);
 
   function buildRegex(str) {
@@ -34,7 +32,7 @@ System.register([], function (_export, _context) {
   _export("buildRegex", buildRegex);
 
   function escapeRegex(value) {
-    return value.replace(/[\\^$*+?.()|[\]{}\/]/g, '\\$&');
+    return value.replace(/[\\^$*+?.()|[\]{}\/]/g, "\\$&");
   }
 
   _export("escapeRegex", escapeRegex);
@@ -42,7 +40,7 @@ System.register([], function (_export, _context) {
   function filterMatch(findItem, filterStr) {
     var invert = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
 
-    var result;
+    var result = void 0;
     if (isRegex(filterStr)) {
       var rex = buildRegex(filterStr);
       result = rex.test(findItem);
