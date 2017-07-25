@@ -112,7 +112,6 @@ class PRTGDataSource {
       if (target.options.mode.name == "Metrics") {
         return this.queryMetrics(target, from, to);
       } else if (target.options.mode.name == "Text") {
-        console.log("Query TEXT");
         return this.queryText(target, from, to);
       } else if (target.options.mode.name == "Raw") {
         return this.queryRaw(target, from, to);
@@ -143,8 +142,6 @@ class PRTGDataSource {
      * existing getDevices getSensors getGroups can be used since they include all properties
      */
     let textPromise;
-    console.log("text query type: " + target.options.textValueFrom.name);
-
     if (target.options.textValueFrom.name == "group") {
       textPromise = this.prtgAPI.getGroups(target.group.name);
     } else if (target.options.textValueFrom.name == "device") {
@@ -192,7 +189,7 @@ class PRTGDataSource {
             if (target.options.includeSensorName) {
               alias = item.sensor_raw + ": " + alias;
             }
-            if (_.keys(devices).length > 1) {
+            if ((_.keys(devices).length > 1) ||  (target.options.includeDeviceName)) {
               alias = item.device + ": " + alias;
             }
             const datapoints = _.map(history, hist => {

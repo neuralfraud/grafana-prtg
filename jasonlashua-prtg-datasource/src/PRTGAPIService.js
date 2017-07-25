@@ -73,8 +73,8 @@ function PRTGAPIService(alertSrv, backendSrv) {
     hashValue(str) {
       let hash = 0;
       if (str.length === 0) return hash;
-      for (let i = 0; i < str.length; i++) {
-        const chr = str.charCodeAt(i);
+      for (let idx = 0; idx < str.length; idx++) {
+        const chr = str.charCodeAt(idx);
         hash = (hash << 5) - hash + chr;
         hash = hash & hash; // Convert to 32bit integer
       }
@@ -84,9 +84,9 @@ function PRTGAPIService(alertSrv, backendSrv) {
     /**
      * pad date parts and optionally add one
      */
-    pad(i, a) {
-      if (a) return ("0" + (i + 1)).slice(-2);
-      return ("0" + i).slice(-2);
+    pad(idx, val) {
+      if (val) return ("0" + (idx + 1)).slice(-2);
+      return ("0" + idx).slice(-2);
     }
 
     /**
@@ -96,16 +96,16 @@ function PRTGAPIService(alertSrv, backendSrv) {
      * @param unixtime UNIX format timestamp
      */
     getPRTGDate(unixtime) {
-      const d = new Date(unixtime * 1000);
-      const s = [
-        d.getFullYear(),
-        this.pad(d.getMonth(), true),
-        this.pad(d.getDate()),
-        this.pad(d.getHours()),
-        this.pad(d.getMinutes()),
-        this.pad(d.getSeconds())
+      const dt = new Date(unixtime * 1000);
+      const str = [
+        dt.getFullYear(),
+        this.pad(dt.getMonth(), true),
+        this.pad(dt.getDate()),
+        this.pad(dt.getHours()),
+        this.pad(dt.getMinutes()),
+        this.pad(dt.getSeconds())
       ];
-      return s.join("-");
+      return str.join("-");
     }
 
     /**
@@ -230,7 +230,7 @@ function PRTGAPIService(alertSrv, backendSrv) {
      */
     performGroupSuggestQuery() {
       const params =
-        "content=groups&columns=objid,group,probe,tags,active,status,message,priority";
+        "content=groups&columns=objid,group,probe,tags,active,status,message,priority&count=9999";
       return this.performPRTGAPIRequest("table.json", params);
     }
 
@@ -241,7 +241,7 @@ function PRTGAPIService(alertSrv, backendSrv) {
      */
     performDeviceSuggestQuery(groupFilter) {
       let params =
-        "content=devices&columns=objid,device,group,probe,tags,active,status,message,priority";
+        "content=devices&columns=objid,device,group,probe,tags,active,status,message,priority&count=9999";
       if (groupFilter) {
         params += ",group" + groupFilter;
       }
@@ -255,7 +255,7 @@ function PRTGAPIService(alertSrv, backendSrv) {
      */
     performSensorSuggestQuery(deviceFilter) {
       const params =
-        "content=sensors&columns=objid,sensor,device,group,probe,tags,active,status,message,priority" +
+        "content=sensors&columns=objid,sensor,device,group,probe,tags,active,status,message,priority&count=9999" +
         deviceFilter;
       return this.performPRTGAPIRequest("table.json", params);
     }

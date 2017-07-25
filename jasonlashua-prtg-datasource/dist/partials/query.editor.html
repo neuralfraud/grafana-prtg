@@ -174,13 +174,19 @@
 		<div class="gf-form-inline" ng-show="ctrl.target.options.mode.name == 'Metrics'">
 		  <gf-form-switch class="gf-form" label="Include Sensor Name"
 			checked="ctrl.target.options.includeSensorName"
-			on-change="ctrl.onQueryOptionChange()">
+			on-change="ctrl.targetChange()">
+		  </gf-form-switch>
+		</div>
+		<div class="gf-form-inline" ng-show="ctrl.target.options.mode.name == 'Metrics'">
+		  <gf-form-switch class="gf-form" label="Include Device Name"
+			checked="ctrl.target.options.includeDeviceName"
+			on-change="ctrl.targetChange()">
 		  </gf-form-switch>
 		</div>
 		<div class="gf-form-inline" ng-show="ctrl.target.options.mode.name == 'Metrics'">
 		  <gf-form-switch class="gf-form" label="Invert Channel Filter"
 			checked="ctrl.target.options.invertChannelFilter"
-			on-change="ctrl.onQueryOptionChange()">
+			on-change="ctrl.targetChange()">
 		  </gf-form-switch>
 		</div>		<div class="gf-form gf-form--grow">
 			<div class="gf-form-label gf-form-label--grow"></div>

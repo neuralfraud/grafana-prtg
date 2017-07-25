@@ -109,7 +109,9 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
                   filterProperty: {},
                   textValueFrom: {},
                   textProperty: {}
-                }
+                },
+                includeSensorName: false,
+                includeDeviceName: false
               }
             };
             _.defaults(target, targetDefaults);
@@ -132,6 +134,8 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
             this.getSensorNames = _.partial(getMetricNames, this, 'sensorList');
             this.getChannelNames = _.partial(getMetricNames, this, 'channelList');
             this.getTextProperties = _.partial(getMetricNames, this, 'propertyList');
+            this.isRegex = _.bind(utils.isRegex);
+            this.isVariable = _.bind(utils.isTemplateVariable);
           };
 
           _this.init();

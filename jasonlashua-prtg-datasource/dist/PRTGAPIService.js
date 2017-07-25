@@ -68,8 +68,8 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
         value: function hashValue(str) {
           var hash = 0;
           if (str.length === 0) return hash;
-          for (var i = 0; i < str.length; i++) {
-            var chr = str.charCodeAt(i);
+          for (var idx = 0; idx < str.length; idx++) {
+            var chr = str.charCodeAt(idx);
             hash = (hash << 5) - hash + chr;
             hash = hash & hash; // Convert to 32bit integer
           }
@@ -77,16 +77,16 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
         }
       }, {
         key: "pad",
-        value: function pad(i, a) {
-          if (a) return ("0" + (i + 1)).slice(-2);
-          return ("0" + i).slice(-2);
+        value: function pad(idx, val) {
+          if (val) return ("0" + (idx + 1)).slice(-2);
+          return ("0" + idx).slice(-2);
         }
       }, {
         key: "getPRTGDate",
         value: function getPRTGDate(unixtime) {
-          var d = new Date(unixtime * 1000);
-          var s = [d.getFullYear(), this.pad(d.getMonth(), true), this.pad(d.getDate()), this.pad(d.getHours()), this.pad(d.getMinutes()), this.pad(d.getSeconds())];
-          return s.join("-");
+          var dt = new Date(unixtime * 1000);
+          var str = [dt.getFullYear(), this.pad(dt.getMonth(), true), this.pad(dt.getDate()), this.pad(dt.getHours()), this.pad(dt.getMinutes()), this.pad(dt.getSeconds())];
+          return str.join("-");
         }
       }, {
         key: "performPRTGAPIRequest",
@@ -173,13 +173,13 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
       }, {
         key: "performGroupSuggestQuery",
         value: function performGroupSuggestQuery() {
-          var params = "content=groups&columns=objid,group,probe,tags,active,status,message,priority";
+          var params = "content=groups&columns=objid,group,probe,tags,active,status,message,priority&count=9999";
           return this.performPRTGAPIRequest("table.json", params);
         }
       }, {
         key: "performDeviceSuggestQuery",
         value: function performDeviceSuggestQuery(groupFilter) {
-          var params = "content=devices&columns=objid,device,group,probe,tags,active,status,message,priority";
+          var params = "content=devices&columns=objid,device,group,probe,tags,active,status,message,priority&count=9999";
           if (groupFilter) {
             params += ",group" + groupFilter;
           }
@@ -188,7 +188,7 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
       }, {
         key: "performSensorSuggestQuery",
         value: function performSensorSuggestQuery(deviceFilter) {
-          var params = "content=sensors&columns=objid,sensor,device,group,probe,tags,active,status,message,priority" + deviceFilter;
+          var params = "content=sensors&columns=objid,sensor,device,group,probe,tags,active,status,message,priority&count=9999" + deviceFilter;
           return this.performPRTGAPIRequest("table.json", params);
         }
       }, {

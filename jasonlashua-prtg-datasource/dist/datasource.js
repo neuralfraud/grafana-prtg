@@ -125,7 +125,6 @@ System.register(["lodash", "app/core/utils/datemath", "./PRTGAPIService", "./uti
               if (target.options.mode.name == "Metrics") {
                 return _this2.queryMetrics(target, from, to);
               } else if (target.options.mode.name == "Text") {
-                console.log("Query TEXT");
                 return _this2.queryText(target, from, to);
               } else if (target.options.mode.name == "Raw") {
                 return _this2.queryRaw(target, from, to);
@@ -158,8 +157,6 @@ System.register(["lodash", "app/core/utils/datemath", "./PRTGAPIService", "./uti
              * existing getDevices getSensors getGroups can be used since they include all properties
              */
             var textPromise = void 0;
-            console.log("text query type: " + target.options.textValueFrom.name);
-
             if (target.options.textValueFrom.name == "group") {
               textPromise = this.prtgAPI.getGroups(target.group.name);
             } else if (target.options.textValueFrom.name == "device") {
@@ -199,7 +196,7 @@ System.register(["lodash", "app/core/utils/datemath", "./PRTGAPIService", "./uti
                   if (target.options.includeSensorName) {
                     alias = item.sensor_raw + ": " + alias;
                   }
-                  if (_.keys(devices).length > 1) {
+                  if (_.keys(devices).length > 1 || target.options.includeDeviceName) {
                     alias = item.device + ": " + alias;
                   }
                   var datapoints = _.map(history, function (hist) {
