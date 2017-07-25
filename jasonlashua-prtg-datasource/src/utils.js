@@ -12,7 +12,7 @@ export function isRegex(str) {
 }
 
 export function isTemplateVariable(str) {
-  if (str.match(/\$\w+/)) {
+  if (str && str.match(/\$\w+/)) {
     return true;
   }
   return false;

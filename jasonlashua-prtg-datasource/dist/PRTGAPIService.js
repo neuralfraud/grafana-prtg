@@ -68,8 +68,8 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
         value: function hashValue(str) {
           var hash = 0;
           if (str.length === 0) return hash;
-          for (var i = 0; i < str.length; i++) {
-            var chr = str.charCodeAt(i);
+          for (var idx = 0; idx < str.length; idx++) {
+            var chr = str.charCodeAt(idx);
             hash = (hash << 5) - hash + chr;
             hash = hash & hash; // Convert to 32bit integer
           }
@@ -77,16 +77,16 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
         }
       }, {
         key: "pad",
-        value: function pad(i, a) {
-          if (a) return ("0" + (i + 1)).slice(-2);
-          return ("0" + i).slice(-2);
+        value: function pad(idx, val) {
+          if (val) return ("0" + (idx + 1)).slice(-2);
+          return ("0" + idx).slice(-2);
         }
       }, {
         key: "getPRTGDate",
         value: function getPRTGDate(unixtime) {
-          var d = new Date(unixtime * 1000);
-          var s = [d.getFullYear(), this.pad(d.getMonth(), true), this.pad(d.getDate()), this.pad(d.getHours()), this.pad(d.getMinutes()), this.pad(d.getSeconds())];
-          return s.join("-");
+          var dt = new Date(unixtime * 1000);
+          var str = [dt.getFullYear(), this.pad(dt.getMonth(), true), this.pad(dt.getDate()), this.pad(dt.getHours()), this.pad(dt.getMinutes()), this.pad(dt.getSeconds())];
+          return str.join("-");
         }
       }, {
         key: "performPRTGAPIRequest",
@@ -173,13 +173,13 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
       }, {
         key: "performGroupSuggestQuery",
         value: function performGroupSuggestQuery() {
-          var params = "content=groups&columns=objid,group,probe,tags,active,status,message,priority";
+          var params = "content=groups&count=9999&columns=objid,group,probe,tags,active,status,message,priority";
           return this.performPRTGAPIRequest("table.json", params);
         }
       }, {
         key: "performDeviceSuggestQuery",
         value: function performDeviceSuggestQuery(groupFilter) {
-          var params = "content=devices&columns=objid,device,group,probe,tags,active,status,message,priority";
+          var params = "content=devices&count=9999&columns=objid,device,group,probe,tags,active,status,message,priority";
           if (groupFilter) {
             params += ",group" + groupFilter;
           }
@@ -188,7 +188,7 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
       }, {
         key: "performSensorSuggestQuery",
         value: function performSensorSuggestQuery(deviceFilter) {
-          var params = "content=sensors&columns=objid,sensor,device,group,probe,tags,active,status,message,priority" + deviceFilter;
+          var params = "content=sensors&count=9999&columns=objid,sensor,device,group,probe,tags,active,status,message,priority" + deviceFilter;
           return this.performPRTGAPIRequest("table.json", params);
         }
       }, {
@@ -267,15 +267,23 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
           var groupFilter = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : "/.*/";
           var hostFilter = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "/.*/";
 
-          return this.getGroups(groupFilter).then(function (filteredGroups) {
-            var filters = [];
-            _.each(filteredGroups, function (group) {
-              filters.push("filter_group=" + group.group);
-            });
-            return _this3.performDeviceSuggestQuery("&" + filters.join("&")).then(function (devices) {
+          //this is kind of silly but no need to include filter_group params if you include all...
+          if (groupFilter == "/.*/") {
+            return this.performDeviceSuggestQuery().then(function (devices) {
               return _this3.filterQuery(devices, hostFilter);
             });
-          });
+          } else {
+            return this.getGroups(groupFilter).then(function (filteredGroups) {
+              var filters = [];
+              _.each(filteredGroups, function (group) {
+                filters.push("filter_group=" + group.group);
+              });
+
+              return _this3.performDeviceSuggestQuery("&" + filters.join("&")).then(function (devices) {
+                return _this3.filterQuery(devices, hostFilter);
+              });
+            });
+          }
         }
       }, {
         key: "getSensors",
@@ -292,9 +300,15 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
             _.each(hosts, function (host) {
               filters.push("filter_device=" + host.device);
             });
-            return _this4.performSensorSuggestQuery("&" + filters.join("&")).then(function (sensors) {
-              return _this4.filterQuery(sensors, sensorFilter);
-            });
+            if (hostFilter == "/.*/") {
+              return _this4.performSensorSuggestQuery().then(function (sensors) {
+                return _this4.filterQuery(sensors, sensorFilter);
+              });
+            } else {
+              return _this4.performSensorSuggestQuery("&" + filters.join("&")).then(function (sensors) {
+                return _this4.filterQuery(sensors, sensorFilter);
+              });
+            }
           });
         }
       }, {
@@ -383,6 +397,20 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
               return history;
             }
             var rCnt = results.histdata.item.length;
+            //console.log(JSON.stringify(results.histdata.item[1],'',4));
+            var testdata = results.histdata.item[0];
+            var chanIndex = 0;
+
+            if (testdata.value_raw && testdata.value_raw.length > 0) {
+              //try to get idx numbers on first row, saves cycles.
+              for (var idx = 0; idx < testdata.value_raw.length; idx++) {
+                if (testdata.value_raw[idx].channel.match(channel + " [(]speed[)]") || testdata.value_raw[idx].channel == channel) {
+                  chanIndex = idx;
+                } else if (testdata.value_raw[idx].channel.match('/' + channel + '/')) {
+                  chanIndex = idx;
+                }
+              }
+            }
 
             for (var iter = 0; iter < rCnt; iter++) {
               var val = void 0;
@@ -392,12 +420,25 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
               if (results.histdata.item[iter].value_raw && results.histdata.item[iter].value_raw.length > 0) {
                 //FIXME: better way of dealing with multiple channels of same name
                 //IE you select "Traffic In" but PRTG provides Volume AND Speed channels.
-                for (var iter2 = 0; iter2 < results.histdata.item[iter].value_raw.length; iter2++) {
-                  //workaround for SNMP Bandwidth Issue #3. Check for presence of (speed) suffix, and use that.
-                  if (results.histdata.item[iter].value_raw[iter2].channel.match(channel + " [(]speed[)]") || results.histdata.item[iter].value_raw[iter2].channel == channel) {
-                    val = Number(results.histdata.item[iter].value_raw[iter2].text);
-                  }
-                }
+                /*
+                  for (
+                    let iter2 = 0;
+                    iter2 < results.histdata.item[iter].value_raw.length;
+                    iter2++
+                  ) {
+                    //workaround for SNMP Bandwidth Issue #3. Check for presence of (speed) suffix, and use that.
+                     if (
+                      results.histdata.item[iter].value_raw[iter2].channel.match(
+                        channel + " [(]speed[)]"
+                      ) ||
+                        results.histdata.item[iter].value_raw[iter2].channel == channel
+                    )
+                    {
+                      val = Number(results.histdata.item[iter].value_raw[iter2].text);
+                    }
+                    */
+                val = Number(results.histdata.item[iter].value_raw[chanIndex].text);
+                //            }
               } else if (results.histdata.item[iter].value_raw) {
                 val = Number(results.histdata.item[iter].value_raw.text);
               }

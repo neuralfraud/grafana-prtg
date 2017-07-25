@@ -59,7 +59,9 @@ export class PRTGQueryController extends QueryCtrl {
             filterProperty: {},
             textValueFrom: {},
             textProperty: {}
-          }
+          },
+          includeSensorName: false,
+          includeDeviceName: false
         }
       };
       _.defaults(target, targetDefaults);
@@ -82,6 +84,8 @@ export class PRTGQueryController extends QueryCtrl {
       this.getSensorNames = _.partial(getMetricNames, this, 'sensorList');
       this.getChannelNames = _.partial(getMetricNames, this, 'channelList');
       this.getTextProperties = _.partial(getMetricNames, this, 'propertyList');
+      this.isRegex = _.bind(utils.isRegex);
+      this.isVariable = _.bind(utils.isTemplateVariable);
     };
     
     this.init();
