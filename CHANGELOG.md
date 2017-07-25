@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - **Query Editor**: Fixed color highlighting. Addresses [#48](https://github.com/neuralfraud/grafana-prtg/issues/48)
 - **Query Editor**: Added option to include a device's name in an item's label. Addresses [#47](https://github.com/neuralfraud/grafana-prtg/issues/47)
 - **API**: Added query string parameter "&count=9999" to group, device, and sensor queries to resolve issues for larger deployments. Addresses [#49](https://github.com/neuralfraud/grafana-prtg/issues/49)
+- **API**: Updated method to retrieve historic data, fixes an issue where no values are returned if the channel display name differes from the name in the API XML response. For instance, SSL Security sensors display the channel "Security Rating", when the actual value contains additional descriptive text. 
+- **API**: Performance improvements in the collection of historic data, the array index to retrieve the channel value from is determined using the first result record instead of being determined for each result, which has a noticable impact with multiple-channel queries and thousands of data points. 
 
 ## [4.0.0] - 2017-07-17
 

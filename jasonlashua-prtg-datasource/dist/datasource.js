@@ -119,7 +119,7 @@ System.register(["lodash", "app/core/utils/datemath", "./PRTGAPIService", "./uti
               }
               if (!target.options.mode) {
                 //legacy dashboard compat.
-                target.options.mode.name = "Metrics";
+                target.options.mode = { name: "Metrics" };
               }
 
               if (target.options.mode.name == "Metrics") {

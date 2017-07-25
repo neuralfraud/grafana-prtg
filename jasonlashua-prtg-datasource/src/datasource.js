@@ -106,7 +106,7 @@ class PRTGDataSource {
       }
       if (!target.options.mode) {
         //legacy dashboard compat.
-        target.options.mode.name = "Metrics";
+        target.options.mode = {name: "Metrics"};
       }
 
       if (target.options.mode.name == "Metrics") {

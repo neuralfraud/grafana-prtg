@@ -11,7 +11,7 @@ System.register([], function (_export, _context) {
   _export("isRegex", isRegex);
 
   function isTemplateVariable(str) {
-    if (str.match(/\$\w+/)) {
+    if (str && str.match(/\$\w+/)) {
       return true;
     }
     return false;
