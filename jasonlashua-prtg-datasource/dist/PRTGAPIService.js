@@ -415,7 +415,9 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
                     var rex = utils.buildRegex('/' + channel + '/g');
                     if (rex.test(testdata.value_raw[idx].channel)) {
                       chanIndex = idx;
-                      console.log("Matched channel " + channel);
+                      console.log("Matched channel " + channel + " to actual value: " + testdata.value_raw[idx].channel);
+                    } else {
+                      console.log("Did not match channel " + channel + " against actual: " + testdata.value_raw[idx].chnanel);
                     }
                   }
               }
