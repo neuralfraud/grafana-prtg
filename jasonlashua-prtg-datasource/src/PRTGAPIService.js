@@ -560,7 +560,7 @@ function PRTGAPIService(alertSrv, backendSrv) {
             else
             {
               let rex = utils.buildRegex('/' + channel + '/g');
-              if (rex.test(channel)) {
+              if (rex.test(testdata.value_raw[idx].channel)) {
                 chanIndex = idx;
                 console.log("Matched channel " + channel);
               }

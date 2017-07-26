@@ -413,7 +413,7 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
                 // 
                 else {
                     var rex = utils.buildRegex('/' + channel + '/g');
-                    if (rex.test(channel)) {
+                    if (rex.test(testdata.value_raw[idx].channel)) {
                       chanIndex = idx;
                       console.log("Matched channel " + channel);
                     }
