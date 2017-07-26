@@ -556,6 +556,8 @@ function PRTGAPIService(alertSrv, backendSrv) {
               chanIndex = idx;
             } else if (testdata.value_raw[idx].channel.match('/' + channel + '/')) {
               chanIndex = idx;
+            } else {
+              console.log ("channel match: " + channel + " does not match " + testdata.value_raw[idx].channel);
             }
           }
         }

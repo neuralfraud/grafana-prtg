@@ -410,6 +410,8 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
                   chanIndex = idx;
                 } else if (testdata.value_raw[idx].channel.match('/' + channel + '/')) {
                   chanIndex = idx;
+                } else {
+                  console.log("channel match: " + channel + " does not match " + testdata.value_raw[idx].channel);
                 }
               }
             }
