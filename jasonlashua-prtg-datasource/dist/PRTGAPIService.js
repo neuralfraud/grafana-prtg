@@ -413,7 +413,7 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
                 // 
                 else {
                     //let rex = utils.buildRegex('/' + channel + '/g');
-                    var rex = new RegExp(channel, 'g');
+                    var rex = new RegExp(utils.escapeRegex(channel), 'g');
                     if (rex.test(testdata.value_raw[idx].channel)) {
                       chanIndex = idx;
                       console.log("Matched channel " + channel + " to actual value: " + testdata.value_raw[idx].channel);
