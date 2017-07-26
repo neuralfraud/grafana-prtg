@@ -417,7 +417,7 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
                       chanIndex = idx;
                       console.log("Matched channel " + channel + " to actual value: " + testdata.value_raw[idx].channel);
                     } else {
-                      console.log("Did not match channel " + channel + " against actual: " + testdata.value_raw[idx].chnanel);
+                      console.log("Did not match channel " + channel + " against actual: " + testdata.value_raw[idx].channel);
                     }
                   }
               }
