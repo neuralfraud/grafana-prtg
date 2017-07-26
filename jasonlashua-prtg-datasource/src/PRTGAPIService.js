@@ -254,9 +254,12 @@ function PRTGAPIService(alertSrv, backendSrv) {
      * @return promise - JSON result set
      */
     performSensorSuggestQuery(deviceFilter) {
-      const params =
-        "content=sensors&count=9999&columns=objid,sensor,device,group,probe,tags,active,status,message,priority" +
-        deviceFilter;
+      let params =
+        "content=sensors&count=9999&columns=objid,sensor,device,group,probe,tags,active,status,message,priority";
+      if (deviceFilter) {
+        params += deviceFilter;
+      }
+        
       return this.performPRTGAPIRequest("table.json", params);
     }
 
@@ -328,7 +331,6 @@ function PRTGAPIService(alertSrv, backendSrv) {
      * @return {collection} - filtered PRTG data object
      */
     getGroups(groupFilter = "/.*/") {
-      console.log("getGroups('" + groupFilter + "')");
       return this.performGroupSuggestQuery().then(groups => {
         return this.filterQuery(groups, groupFilter);
       });
@@ -381,7 +383,7 @@ function PRTGAPIService(alertSrv, backendSrv) {
         _.each(hosts, host => {
           filters.push("filter_device=" + host.device);
         });
-        if (hostFilter == "/.*/") {
+        if (hostFilter == "/.*/" && groupFilter == "/.*/") {
           return this.performSensorSuggestQuery().then(sensors => {
             return this.filterQuery(sensors, sensorFilter);
           });
@@ -538,7 +540,6 @@ function PRTGAPIService(alertSrv, backendSrv) {
           return history;
         }
         const rCnt = results.histdata.item.length;
-        //console.log(JSON.stringify(results.histdata.item[1],'',4));
         const testdata = results.histdata.item[0];
         let chanIndex = 0;
 
@@ -603,16 +604,6 @@ function PRTGAPIService(alertSrv, backendSrv) {
         return history;
       });
     }
-
-    /*
-     else {
-                console.log("rex match: channel=" + channel);
-                const rex = utils.buildRegex('/' + channel + '/');
-                if (rex.test(results.histdata.item[iter].value_raw[iter2].channel)) {
-                  val = Number(results.histdata.item[iter].value_raw[iter2].text);
-                }
-              }*/
-    
 
     /**
      * Retrieve messages for a given sensor. Used only for annotation queries.

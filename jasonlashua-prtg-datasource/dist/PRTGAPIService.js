@@ -188,7 +188,11 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
       }, {
         key: "performSensorSuggestQuery",
         value: function performSensorSuggestQuery(deviceFilter) {
-          var params = "content=sensors&count=9999&columns=objid,sensor,device,group,probe,tags,active,status,message,priority" + deviceFilter;
+          var params = "content=sensors&count=9999&columns=objid,sensor,device,group,probe,tags,active,status,message,priority";
+          if (deviceFilter) {
+            params += deviceFilter;
+          }
+
           return this.performPRTGAPIRequest("table.json", params);
         }
       }, {
@@ -254,7 +258,6 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
 
           var groupFilter = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : "/.*/";
 
-          console.log("getGroups('" + groupFilter + "')");
           return this.performGroupSuggestQuery().then(function (groups) {
             return _this2.filterQuery(groups, groupFilter);
           });
@@ -300,7 +303,7 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
             _.each(hosts, function (host) {
               filters.push("filter_device=" + host.device);
             });
-            if (hostFilter == "/.*/") {
+            if (hostFilter == "/.*/" && groupFilter == "/.*/") {
               return _this4.performSensorSuggestQuery().then(function (sensors) {
                 return _this4.filterQuery(sensors, sensorFilter);
               });
@@ -397,7 +400,6 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
               return history;
             }
             var rCnt = results.histdata.item.length;
-            //console.log(JSON.stringify(results.histdata.item[1],'',4));
             var testdata = results.histdata.item[0];
             var chanIndex = 0;
 
