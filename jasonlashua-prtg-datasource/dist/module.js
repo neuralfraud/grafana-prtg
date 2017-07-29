@@ -3,7 +3,7 @@
 System.register(['./datasource', './query_ctrl'], function (_export, _context) {
   "use strict";
 
-  var PRTGDataSource, PRTGQueryController, PRTGConfigController, PRTGQueryOptionsController, PRTGAnnotationsQueryController;
+  var PRTGDataSource, PRTGQueryController, PRTGConfigController, PRTGAnnotationsQueryController;
 
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -24,11 +24,8 @@ System.register(['./datasource', './query_ctrl'], function (_export, _context) {
 
       PRTGConfigController.templateUrl = './partials/config.html';
 
-      _export('QueryOptionsCtrl', PRTGQueryOptionsController = function PRTGQueryOptionsController() {
-        _classCallCheck(this, PRTGQueryOptionsController);
-      });
-
-      PRTGQueryOptionsController.templateUrl = './partials/query.options.html';
+      //class PRTGQueryOptionsController {}
+      //PRTGQueryOptionsController.templateUrl = './partials/query.options.html';
 
       _export('AnnotationsQueryCtrl', PRTGAnnotationsQueryController = function PRTGAnnotationsQueryController() {
         _classCallCheck(this, PRTGAnnotationsQueryController);
@@ -41,8 +38,6 @@ System.register(['./datasource', './query_ctrl'], function (_export, _context) {
       _export('QueryCtrl', PRTGQueryController);
 
       _export('ConfigCtrl', PRTGConfigController);
-
-      _export('QueryOptionsCtrl', PRTGQueryOptionsController);
 
       _export('AnnotationsQueryCtrl', PRTGAnnotationsQueryController);
     }

@@ -16,7 +16,7 @@
 	</div>
 	<div class="gf-form-inline" ng-show="ctrl.target.options.mode.name == 'Raw'">
 		<div class="gf-form max-width-20">
-			<label class="gf-form-label width-7">URI</label>
+			<label class="gf-form-label query-keyword width-7">URI</label>
 			<input type="text"
 				   ng-model="ctrl.target.raw.uri"
 				   ng-blur="ctrl.targetChange()"
@@ -24,13 +24,13 @@
 				   spellcheck="false"
 				   placeholder="getstatus.htm">
 		</div>
-		<div class="gf-form max-width-40">
-			<label class="gf-form-label width-10">Query String</label>
+		<div class="gf-form">
+			<label class="gf-form-label query-keyword width-10">Query String</label>
 			<input type="text"
 				   ng-model="ctrl.target.raw.queryString"
 				   ng-blur="ctrl.targetChange()"
 				   spellcheck=false
-				   class="gf-form-input"
+				   class="gf-form-input width-30"
 				   placeholder="id=0&tabid=1">
 		</div>
 		<div class="gf-form gf-form--grow">
@@ -53,7 +53,7 @@
 			}">
 			</input>
 		</div>
-		<div class="gf-form max-width-40">
+		<div class="gf-form">
 			<label class="gf-form-label query-keyword width-7">Host</label>
 			<input type="text"
 			ng-model="ctrl.target.device.name"
@@ -75,7 +75,7 @@
 	</div>
 
 	<div class="gf-form-inline" ng-show="ctrl.target.options.mode.name !== 'Raw'">
-		<div class="gf-form max-width-40">
+		<div class="gf-form max-width-20">
 			<label class="gf-form-label query-keyword width-7">Sensor</label>
 			<input type="text"
 			ng-model="ctrl.target.sensor.name"
@@ -90,7 +90,7 @@
 	        }">
 			</input>
 		</div>
-		<div class="gf-form max-width-40" ng-show="ctrl.target.options.mode.name == 'Metrics'">
+		<div class="gf-form" ng-show="ctrl.target.options.mode.name == 'Metrics'">
 			<label class="gf-form-label query-keyword width-7">Channel</label>
 			<input type="text"
 			ng-model="ctrl.target.channel.name"
@@ -117,7 +117,7 @@
 			<label class="gf-form-label query-keyword width-7">Options</label>
 		</div>
 			<div class="gf-form max-width-40" ng-show="ctrl.target.options.mode.name == 'Metrics'">
-			<label class="gf-form-label query-keyword width-10">Filter Property</label>
+			<label class="gf-form-label width-10">Filter Property</label>
 			<select
 				   ng-model="ctrl.target.options.filterProperty"
 				   ng-change="ctrl.targetChange()"
@@ -130,7 +130,7 @@
 			</select>
 		</div>
 		<div class="gf-form max-width-20" ng-show="ctrl.target.options.mode.name == 'Text'">
-			<label class="gf-form-label query-keyword width-7">Value From</label>
+			<label class="gf-form-label width-7">Value From</label>
 			<select
 				   ng-model="ctrl.target.options.textValueFrom"
 				   ng-change="ctrl.targetChange()"
@@ -143,7 +143,7 @@
 			</select>
 		</div>
 		<div class="gf-form max-width-20" ng-show="ctrl.target.options.mode.name == 'Text'">
-			<label class="gf-form-label query-keyword width-7">Property</label>
+			<label class="gf-form-label width-7">Property</label>
 			<select
 				   ng-model="ctrl.target.options.textProperty"
 				   ng-change="ctrl.targetChange()"
@@ -158,7 +158,7 @@
 		<div class="gf-form-inline">
 		<!-- Text metric regex -->
 			<div class="gf-form max-width-20">
-				<label class="gf-form-label query-keyword width-7">Text filter</label>
+				<label class="gf-form-label width-7">Text filter</label>
 				<input type="text"
 					class="gf-form-input"
 					ng-model="ctrl.target.options.textFilter"

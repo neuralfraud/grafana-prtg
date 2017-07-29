@@ -406,11 +406,17 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
             if (testdata.value_raw && testdata.value_raw.length > 0) {
               //try to get idx numbers on first row, saves cycles.
               for (var idx = 0; idx < testdata.value_raw.length; idx++) {
+                // this hack specifically applies to bandwidth sensors that track speed AND volume, a better solution remains to be implemented.
                 if (testdata.value_raw[idx].channel.match(channel + " [(]speed[)]") || testdata.value_raw[idx].channel == channel) {
                   chanIndex = idx;
-                } else if (testdata.value_raw[idx].channel.match('/' + channel + '/')) {
-                  chanIndex = idx;
                 }
+                // 
+                else {
+                    var rex = new RegExp(utils.escapeRegex(channel), 'g');
+                    if (rex.test(testdata.value_raw[idx].channel)) {
+                      chanIndex = idx;
+                    }
+                  }
               }
             }
 
