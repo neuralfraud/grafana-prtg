@@ -15,6 +15,8 @@ class PRTGDataSource {
     this.alertSrv = alertSrv;
     this.name = instanceSettings.name;
     this.url = instanceSettings.url;
+    //this.tzShift = 0;
+    this.tzAutoAdjust = instanceSettings.jsonData.tzAutoAdjust;
     this.username = instanceSettings.jsonData.prtgApiUser;
     this.passhash = instanceSettings.jsonData.prtgApiPasshash;
     this.cacheTimeoutMintues =
@@ -24,23 +26,25 @@ class PRTGDataSource {
       this.url,
       this.username,
       this.passhash,
-      this.cacheTimeoutMintues
+      this.cacheTimeoutMintues,
+      this.tzAutoAdjust
     );
+    console.log("tz setting: " + this.tzAutoAdjust);
   }
 
   /**
    * Test the datasource
    */
   testDatasource() {
+    console.log("tz setting: " + this.tzAutoAdjust);
     return this.prtgAPI.getVersion().then(
       apiVersion => {
-        return this.prtgAPI.performPRTGAPILogin().then(() => {
-          return {
-            status: "success",
-            title: "Success",
-            message: "PRTG API version: " + apiVersion
-          };
-        });
+        return {
+
+          status: "success",
+          title: "Success",
+          message: "PRTG API version: " + apiVersion
+        };
       },
       error => {
         return {
@@ -61,6 +65,8 @@ class PRTGDataSource {
   query(options) {
     const from = Math.ceil(dateMath.parse(options.range.from) / 1000);
     const to = Math.ceil(dateMath.parse(options.range.to) / 1000);
+
+
     const promises = _.map(options.targets, t => {
       const target = _.cloneDeep(t);
       if (
@@ -193,7 +199,11 @@ class PRTGDataSource {
               alias = item.device + ": " + alias;
             }
             const datapoints = _.map(history, hist => {
-              return [hist.value, hist.datetime];
+              let value = hist.value;
+              if (target.options.multiplier && utils.isNumeric(target.options.multiplier)) {
+                value = hist.value * target.options.multiplier;
+              }
+              return [value, hist.datetime];
             });
             const timeseries = { target: alias, datapoints: datapoints };
             return timeseries;
@@ -219,7 +229,7 @@ class PRTGDataSource {
       });
   }
 
-  /* Find Metrics from templated letiables
+  /* Find Metrics from templated variables
     *
     * @param query Query string:
     * channel:sensor=#### <-- must use 

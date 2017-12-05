@@ -10,7 +10,7 @@ import { XMLXform } from "./xmlparser";
 /** @ngInject */
 function PRTGAPIService(alertSrv, backendSrv) {
   class PRTGAPI {
-    constructor(api_url, username, passhash, cacheTimeoutMinutes) {
+    constructor(api_url, username, passhash, cacheTimeoutMinutes, tzAutoAdjust) {
       this.url = api_url;
       this.username = username;
       this.passhash = passhash;
@@ -19,6 +19,18 @@ function PRTGAPIService(alertSrv, backendSrv) {
       this.cacheTimeoutMinutes = cacheTimeoutMinutes;
       this.alertSrv = alertSrv;
       this.backendSrv = backendSrv;
+      this.tzAutoAdjust = tzAutoAdjust;
+      this.tzAutoAdjustValue = 0;
+      if (tzAutoAdjust) {
+        this.performPRTGAPIRequest("status.json").then(response => { 
+          const jsClock =  response.jsClock; 
+          const localTs = Date.now();
+          console.log ("Remote Clock: " + jsClock + "; Local Clock: " + localTs);
+          this.tzAutoAdjustValue = Math.round(((localTs / 1000) - jsClock),0) * 1000
+          console.log("Auto Adjust Value: " + this.tzAutoAdjustValue);
+        })
+      }
+      
     }
 
     /**
@@ -31,7 +43,7 @@ function PRTGAPIService(alertSrv, backendSrv) {
     inCache(url) {
       if (
         Date.now() - this.cache[this.hashValue(url)] >
-        this.cacheTimeoutMinutes * 60 * 1000
+          this.cacheTimeoutMinutes * 60 * 1000
       ) {
         return false;
       }
@@ -205,7 +217,7 @@ function PRTGAPIService(alertSrv, backendSrv) {
      * 
      * @return Promise
      */
-    performPRTGAPILogin() {
+    /*    performPRTGAPILogin() {
       const username = this.username;
       const passhash = this.passhash;
       const options = {
@@ -222,6 +234,7 @@ function PRTGAPIService(alertSrv, backendSrv) {
         return response;
       });
     }
+    */
 
     /**
      * Query API for list of groups

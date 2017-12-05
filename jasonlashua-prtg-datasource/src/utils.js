@@ -11,6 +11,11 @@ export function isRegex(str) {
   return regexPattern.test(str);
 }
 
+//Thanks StackOverflow 
+export function isNumeric(strValue) {
+  return !isNaN(parseFloat(strValue)) && isFinite(strValue);
+}
+
 export function isTemplateVariable(str) {
   if (str && str.match(/\$\w+/)) {
     return true;

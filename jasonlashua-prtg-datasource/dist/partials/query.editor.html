@@ -171,6 +171,21 @@
 					}">
 		    </div>
 		</div>
+		<div class="gf-form-inline">
+		<!-- Multiplier -->
+			<div class="gf-form max-width-20">
+				<label class="gf-form-label width-7">Multiplier</label>
+				<input type="text"
+					class="gf-form-input"
+					ng-model="ctrl.target.options.multiplier"
+					spellcheck='false'
+					placeholder=".1 .01 or 8, 1024, etc."
+					ng-blur="ctrl.targetChange()"
+					ng-class="{
+					'filter-number': ctrl.isNumeric(ctrl.target.options.multiplier)
+					}">
+		    </div>
+		</div>			
 		<div class="gf-form-inline" ng-show="ctrl.target.options.mode.name == 'Metrics'">
 		  <gf-form-switch class="gf-form" label="Include Sensor Name"
 			checked="ctrl.target.options.includeSensorName"

@@ -26,9 +26,9 @@
            required>
     </input>
   </div>    
-   
+     
    <div class="gf-form">
-    <span class="gf-form-label width-7">
+    <span class="gf-form-label max-width-21">
       Cache timeout
     </span>
     <input class="gf-form-input max-width-7"
@@ -38,4 +38,13 @@
            required>
     </input>
    </div>
+
+   <div class="gf-form-inline">
+      <gf-form-switch class="gf-form ng-scope ng-isolate-scope" label="Timezone Auto-Adjust" label-class="width-16" checked="ctrl.current.jsonData.tzAutoAdjust" switch-class="max-width-6">
+        <div class="gf-form-switch max-width-6" ng-if="ctrl.show">
+          <input id="check-tz" type="checkbox" ng-model="ctrl.current.jsonData.tzAutoAdjust" class="ng-pristine ng-untouched ng-valid ng-empty">
+          <label for="check-tz" data-on="Yes" data-off="No"></label>
+        </div>
+      </gf-form-switch>
+    </div>
 </div>

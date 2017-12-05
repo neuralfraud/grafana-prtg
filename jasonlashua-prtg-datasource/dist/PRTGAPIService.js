@@ -19,7 +19,9 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
   /** @ngInject */
   function PRTGAPIService(alertSrv, backendSrv) {
     var PRTGAPI = function () {
-      function PRTGAPI(api_url, username, passhash, cacheTimeoutMinutes) {
+      function PRTGAPI(api_url, username, passhash, cacheTimeoutMinutes, tzAutoAdjust) {
+        var _this = this;
+
         _classCallCheck(this, PRTGAPI);
 
         this.url = api_url;
@@ -30,6 +32,17 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
         this.cacheTimeoutMinutes = cacheTimeoutMinutes;
         this.alertSrv = alertSrv;
         this.backendSrv = backendSrv;
+        this.tzAutoAdjust = tzAutoAdjust;
+        this.tzAutoAdjustValue = 0;
+        if (tzAutoAdjust) {
+          this.performPRTGAPIRequest("status.json").then(function (response) {
+            var jsClock = response.jsClock;
+            var localTs = Date.now();
+            console.log("Remote Clock: " + jsClock + "; Local Clock: " + localTs);
+            _this.tzAutoAdjustValue = Math.round(localTs / 1000 - jsClock, 0) * 1000;
+            console.log("Auto Adjust Value: " + _this.tzAutoAdjustValue);
+          });
+        }
       }
 
       /**
@@ -152,22 +165,6 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
             } else {
               return response.Version;
             }
-          });
-        }
-      }, {
-        key: "performPRTGAPILogin",
-        value: function performPRTGAPILogin() {
-          var _this = this;
-
-          var username = this.username;
-          var passhash = this.passhash;
-          var options = {
-            method: "GET",
-            url: this.url + "/getstatus.htm?id=0&username=" + username + "&passhash=" + passhash
-          };
-          return this.backendSrv.datasourceRequest(options).then(function (response) {
-            _this.passhash = response;
-            return response;
           });
         }
       }, {

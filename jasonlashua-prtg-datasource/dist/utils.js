@@ -8,7 +8,15 @@ System.register([], function (_export, _context) {
     return regexPattern.test(str);
   }
 
+  //Thanks StackOverflow 
+
   _export("isRegex", isRegex);
+
+  function isNumeric(strValue) {
+    return !isNaN(parseFloat(strValue)) && isFinite(strValue);
+  }
+
+  _export("isNumeric", isNumeric);
 
   function isTemplateVariable(str) {
     if (str && str.match(/\$\w+/)) {

@@ -52,11 +52,14 @@ System.register(["lodash", "app/core/utils/datemath", "./PRTGAPIService", "./uti
           this.alertSrv = alertSrv;
           this.name = instanceSettings.name;
           this.url = instanceSettings.url;
+          //this.tzShift = 0;
+          this.tzAutoAdjust = instanceSettings.jsonData.tzAutoAdjust;
           this.username = instanceSettings.jsonData.prtgApiUser;
           this.passhash = instanceSettings.jsonData.prtgApiPasshash;
           this.cacheTimeoutMintues = instanceSettings.jsonData.cacheTimeoutMinutes || 5;
           this.limitmetrics = instanceSettings.meta.limitmetrics || 100;
-          this.prtgAPI = new PRTGAPIService(this.url, this.username, this.passhash, this.cacheTimeoutMintues);
+          this.prtgAPI = new PRTGAPIService(this.url, this.username, this.passhash, this.cacheTimeoutMintues, this.tzAutoAdjust);
+          console.log("tz setting: " + this.tzAutoAdjust);
         }
 
         /**
@@ -67,16 +70,14 @@ System.register(["lodash", "app/core/utils/datemath", "./PRTGAPIService", "./uti
         _createClass(PRTGDataSource, [{
           key: "testDatasource",
           value: function testDatasource() {
-            var _this = this;
-
+            console.log("tz setting: " + this.tzAutoAdjust);
             return this.prtgAPI.getVersion().then(function (apiVersion) {
-              return _this.prtgAPI.performPRTGAPILogin().then(function () {
-                return {
-                  status: "success",
-                  title: "Success",
-                  message: "PRTG API version: " + apiVersion
-                };
-              });
+              return {
+
+                status: "success",
+                title: "Success",
+                message: "PRTG API version: " + apiVersion
+              };
             }, function (error) {
               return {
                 status: "error",
@@ -88,10 +89,11 @@ System.register(["lodash", "app/core/utils/datemath", "./PRTGAPIService", "./uti
         }, {
           key: "query",
           value: function query(options) {
-            var _this2 = this;
+            var _this = this;
 
             var from = Math.ceil(dateMath.parse(options.range.from) / 1000);
             var to = Math.ceil(dateMath.parse(options.range.to) / 1000);
+
             var promises = _.map(options.targets, function (t) {
               var target = _.cloneDeep(t);
               if (target.hide || !target.group || !target.device || !target.channel || !target.sensor) {
@@ -101,10 +103,10 @@ System.register(["lodash", "app/core/utils/datemath", "./PRTGAPIService", "./uti
               if (!target.options) {
                 target.options = {};
               }
-              target.group.name = _this2.templateSrv.replace(target.group.name, options.scopedVars);
-              target.device.name = _this2.templateSrv.replace(target.device.name, options.scopedVars);
-              target.sensor.name = _this2.templateSrv.replace(target.sensor.name, options.scopedVars);
-              target.channel.name = _this2.templateSrv.replace(target.channel.name, options.scopedVars);
+              target.group.name = _this.templateSrv.replace(target.group.name, options.scopedVars);
+              target.device.name = _this.templateSrv.replace(target.device.name, options.scopedVars);
+              target.sensor.name = _this.templateSrv.replace(target.sensor.name, options.scopedVars);
+              target.channel.name = _this.templateSrv.replace(target.channel.name, options.scopedVars);
               if (target.group.name == "*") {
                 target.group.name = "/.*/";
               }
@@ -123,11 +125,11 @@ System.register(["lodash", "app/core/utils/datemath", "./PRTGAPIService", "./uti
               }
 
               if (target.options.mode.name == "Metrics") {
-                return _this2.queryMetrics(target, from, to);
+                return _this.queryMetrics(target, from, to);
               } else if (target.options.mode.name == "Text") {
-                return _this2.queryText(target, from, to);
+                return _this.queryText(target, from, to);
               } else if (target.options.mode.name == "Raw") {
-                return _this2.queryRaw(target, from, to);
+                return _this.queryRaw(target, from, to);
               }
             });
             return Promise.all(_.flatten(promises)).then(function (results) {
@@ -186,12 +188,12 @@ System.register(["lodash", "app/core/utils/datemath", "./PRTGAPIService", "./uti
         }, {
           key: "queryMetrics",
           value: function queryMetrics(target, from, to) {
-            var _this3 = this;
+            var _this2 = this;
 
             return this.prtgAPI.getItemsFromTarget(target).then(function (items) {
               var devices = _.uniq(_.map(items, "device"));
               var historyPromise = _.map(items, function (item) {
-                return _this3.prtgAPI.getItemHistory(item.sensor, item.name, from, to).then(function (history) {
+                return _this2.prtgAPI.getItemHistory(item.sensor, item.name, from, to).then(function (history) {
                   var alias = item.name;
                   if (target.options.includeSensorName) {
                     alias = item.sensor_raw + ": " + alias;
@@ -200,7 +202,11 @@ System.register(["lodash", "app/core/utils/datemath", "./PRTGAPIService", "./uti
                     alias = item.device + ": " + alias;
                   }
                   var datapoints = _.map(history, function (hist) {
-                    return [hist.value, hist.datetime];
+                    var value = hist.value;
+                    if (target.options.multiplier && utils.isNumeric(target.options.multiplier)) {
+                      value = hist.value * target.options.multiplier;
+                    }
+                    return [value, hist.datetime];
                   });
                   var timeseries = { target: alias, datapoints: datapoints };
                   return timeseries;
@@ -212,21 +218,21 @@ System.register(["lodash", "app/core/utils/datemath", "./PRTGAPIService", "./uti
         }, {
           key: "annotationQuery",
           value: function annotationQuery(options) {
-            var _this4 = this;
+            var _this3 = this;
 
             var from = Math.ceil(dateMath.parse(options.range.from) / 1000);
             var to = Math.ceil(dateMath.parse(options.range.to) / 1000);
             return this.prtgAPI.getMessages(from, to, options.annotation.sensorId).then(function (messages) {
               _.each(messages, function (message) {
                 message.annotation = options.annotation; //inject the annotation into the object
-              }, _this4);
+              }, _this3);
               return messages;
             });
           }
         }, {
           key: "metricFindQuery",
           value: function metricFindQuery(query) {
-            var _this5 = this;
+            var _this4 = this;
 
             var filter = {};
             var queryParts = query.split(":");
@@ -284,7 +290,7 @@ System.register(["lodash", "app/core/utils/datemath", "./PRTGAPIService", "./uti
             return items.then(function (metrics) {
               return _.map(metrics, function (metric) {
                 return { text: metric[filter.type], expandable: 0 };
-              }, _this5);
+              }, _this4);
             });
           }
         }, {

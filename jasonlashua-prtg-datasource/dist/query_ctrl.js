@@ -135,6 +135,7 @@ System.register(['app/plugins/sdk', 'lodash', './utils', './css/query-editor.css
             this.getChannelNames = _.partial(getMetricNames, this, 'channelList');
             this.getTextProperties = _.partial(getMetricNames, this, 'propertyList');
             this.isRegex = _.bind(utils.isRegex);
+            this.isNumeric = _.bind(utils.isNumeric);
             this.isVariable = _.bind(utils.isTemplateVariable);
           };
 
