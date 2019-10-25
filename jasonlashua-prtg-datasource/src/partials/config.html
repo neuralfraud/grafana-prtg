@@ -1,4 +1,9 @@
-<datasource-http-settings current="ctrl.current">
+<datasource-http-settings 
+  current="ctrl.current"
+  suggest_url="http://127.0.0.1"
+  suggest_access="Server"
+  >
+
 </datasource-http-settings>
 
 <div class="gf-form-group">
@@ -21,7 +26,7 @@
     </span>
     <input class="gf-form-input max-width-21"
            type="password"
-           ng-model='ctrl.current.jsonData.prtgApiPasshash'
+           ng-model='ctrl.current.secureJsonData.prtgApiPasshash'
            placeholder="password"
            required>
     </input>
