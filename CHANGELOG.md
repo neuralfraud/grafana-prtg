@@ -1,8 +1,19 @@
 # Change Log
+## [4.0.4] - 2019-10-25 WIP
 
-As of July, 2017, all significant changes will be logged in this document.
+### Fixed
+ - Memory Leak when using Grafana and PRTG plugin [#109](https://github.com/neuralfraud/grafana-prtg/issues/109)
+ - 
 
-The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
+
+### Changed
+
+- Dependency for lodash changed to 4.17.13.
+- Dependency for grafanaVersion changed to 6.2 (mitigates vulnerability in lodash < 4.17.11)
+
+### Added
+
+- Ability to specify metric value multiplier as a decimal, E.g., for converting Bytes from flow sensors to bits.
 
 ## [4.0.3] - 2017-07-28
 

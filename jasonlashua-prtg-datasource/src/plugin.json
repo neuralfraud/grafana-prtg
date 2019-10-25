@@ -22,6 +22,9 @@
       }
     ],
     "version": "4.0.4",
-    "updated": "2019-10-25"
+    "updated": "2019-10-25",
+    "dependencies": { 
+      "grafanaVersion": ">=6.2.0"
+    }
   }
 }

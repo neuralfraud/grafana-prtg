@@ -37,19 +37,24 @@ function PRTGAPIService(alertSrv, backendSrv) {
      * Tests whether a url has been stored in the cache.
      * Returns boolean true | false
      * 
+     * Also actually implements deletion. TODO: Test Browser Cache API
+     * 
      * @param url 
      * @return boolean
      */
     inCache(url) {
-      if (
-        Date.now() - this.cache[this.hashValue(url)] >
-          this.cacheTimeoutMinutes * 60 * 1000
-      ) {
-        return false;
+      for(var item in this.cache) {
+        if (Date.now() - this.cache[item].timestamp > (this.cacheTimeoutMinutes * 60000)) {
+          console.log("Expired Cache Object " + item + " (timestamp: " + this.cache[item].timestamp + "). Deleting...")
+          delete(this.cache[item])
+        }
       }
+      
       if (this.cache[this.hashValue(url)]) {
-        return true;
+        console.log("Cache hit for url="+url)
+        return true
       }
+      console.log("Cache miss for url=" + url)
       return false;
     }
 
@@ -60,7 +65,7 @@ function PRTGAPIService(alertSrv, backendSrv) {
      * @return Promise
      */
     getCache(url) {
-      return Promise.resolve(this.cache[this.hashValue(url)]);
+      return Promise.resolve(this.cache[this.hashValue(url)].data);
     }
 
     /**
@@ -71,7 +76,7 @@ function PRTGAPIService(alertSrv, backendSrv) {
      * @return promise
      */
     setCache(url, data) {
-      this.cache[this.hashValue(url)] = data;
+      this.cache[this.hashValue(url)] = {"timestamp": Date.now(), "data": data};
       return this.getCache(url);
     }
 
@@ -171,21 +176,16 @@ function PRTGAPIService(alertSrv, backendSrv) {
                 return response.data;
               } else {
                 //All else must be XML from table.xml so throw it into the transformer and get JSON back.
-                if (response.data == "Not enough monitoring data") {
+                if (response.data == "Not enough monitoring data" || response.data.length < 200) {
                   //Fixes Issue #5 - reject the promise with a message. The message is displayed instead of an uncaught exception.
                   return Promise.reject({
                     message:
-                      "Not enough monitoring data.\n\nRequest:\n" +
+                      "Not enough monitoring data or zero events returned.\n\nRequest:\n" +
                       params +
                       "\n"
                   });
                 }
-                if (response.data.length > 200) {
-                  return new XMLXform(method, response.data);
-                } else {
-                  console.log("Short Response! :( \n" + response.data);
-                  return {};
-                }
+                return new XMLXform(method, response.data);
               }
             },
             error => {
