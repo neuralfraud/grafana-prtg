@@ -3,12 +3,21 @@
 
 ### Fixed
  - Memory Leak when using Grafana and PRTG plugin [#109](https://github.com/neuralfraud/grafana-prtg/issues/109) 
+ - Channel names now support bandwidth sensors correctly (speed and volume can be selected). [#138](https://github.com/neuralfraud/grafana-prtg/issues/138)
+ - Slow performance from parsing XML - changed to native JSON [#138](https://github.com/neuralfraud/grafana-prtg/issues/138)
 
 ### Changed
 
 - Dependency for lodash changed to 4.17.13.
 - Dependency for grafanaVersion changed to 6.3+ (mitigates vulnerability in lodash < 4.17.11)
 - **POTENTIALLY BREAKING**: Plguin retrieves data using *historicdata.json* now, in older versions of PRTG (17.x or older) the JSON was malformed. This appears to have been resolved at some point in the last two years. This should lead to a massive performance increase as it is no longer necessary to parse/transform XML into JSON. 
+- moved pad function from PRTGAPIService to utils
+- Query builder: Channel names now come from directly from the values, this fixes a **lot** of issues.
+
+
+### Removed
+- sass tasks from Gruntfile.js 
+- XML Parser
 
 ### Added
 
