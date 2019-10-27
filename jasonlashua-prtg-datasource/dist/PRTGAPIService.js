@@ -38,9 +38,7 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
           this.performPRTGAPIRequest("status.json").then(function (response) {
             var jsClock = response.jsClock;
             var localTs = Date.now();
-            console.log("Remote Clock: " + jsClock + "; Local Clock: " + localTs);
-            _this.tzAutoAdjustValue = Math.round(localTs / 1000 - jsClock, 0) * 1000;
-            console.log("Auto Adjust Value: " + _this.tzAutoAdjustValue);
+            _this.tzAutoAdjustValue = Math.round(localTs - jsClock, 0); //i'll finish implementing this some day
           });
         }
       }
@@ -61,16 +59,13 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
         value: function inCache(url) {
           for (var item in this.cache) {
             if (Date.now() - this.cache[item].timestamp > this.cacheTimeoutMinutes * 60000) {
-              console.log("Expired Cache Object " + item + " (timestamp: " + this.cache[item].timestamp + "). Deleting...");
               delete this.cache[item];
             }
           }
 
           if (this.cache[this.hashValue(url)]) {
-            console.log("Cache hit for url=" + url);
             return true;
           }
-          console.log("Cache miss for url=" + url);
           return false;
         }
       }, {
@@ -144,15 +139,17 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
                 return response.data.messages;
               } else if (response.data.Version) {
                 return response.data;
-              } else {
-                //All else must be XML from table.xml so throw it into the transformer and get JSON back.
-                if (response.data == "Not enough monitoring data" || response.data.length < 200) {
-                  //Fixes Issue #5 - reject the promise with a message. The message is displayed instead of an uncaught exception.
+              } else if (response.data.histdata) {
+                if (response.data.treesize == 0) {
                   return Promise.reject({
-                    message: "Not enough monitoring data or zero events returned.\n\nRequest:\n" + params + "\n"
+                    message: "No objects returned by query (treesize = 0). Try expanding your time range or something.\n\n: Request:\n" + params
                   });
                 }
-                return new XMLXform(method, response.data);
+                return response.data.histdata;
+              } else {
+                return Promise.reject({
+                  message: "Not sure how to handle this request.\n\nRequest:\n" + params + "\n"
+                });
               }
             }, function (error) {
               return Promise.reject(error.status + ": " + error.statusText);
@@ -365,14 +362,8 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
       }, {
         key: "getItemsFromTarget",
         value: function getItemsFromTarget(target) {
-          if (target.options) {
-            if (target.options.invertChannelFilter) {
-              return this.getItems(target.group.name, target.device.name, target.sensor.name, target.channel.name, true);
-            } else {
-              return this.getItems(target.group.name, target.device.name, target.sensor.name, target.channel.name);
-            }
-          }
-          return this.getItems(target.group.name, target.device.name, target.sensor.name, target.channel.name);
+          var filtermode = target.options.invertChannelFilter ? true : false;
+          return this.getItems(target.group.name, target.device.name, target.sensor.name, target.channel.name, filtermode);
         }
       }, {
         key: "getItemHistory",
@@ -387,74 +378,41 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
             avg = "86400";
           }
 
-          var method = "historicdata.xml";
-          var params = "id=" + sensor + "&sdate=" + this.getPRTGDate(dateFrom) + "&edate=" + this.getPRTGDate(dateTo) + "&avg=" + avg + "&pctshow=false&pctmode=false";
+          var method = "historicdata.json";
+          var params = "id=" + sensor + "&sdate=" + this.getPRTGDate(dateFrom) + "&edate=" + this.getPRTGDate(dateTo) + "&avg=" + avg + "&pctshow=false&pctmode=false&usecaption=1";
           /*
                  * Modified to read the "statusid" value, this can then be mapped via lookup table to a PRTG status type
                  * 1=Unknown, 2=Scanning, 3=Up, 4=Warning, 5=Down, 6=No Probe, 7=Paused by User, 8=Paused by Dependency,
                  * 9=Paused by Schedule, 10=Unusual, 11=Not Licensed, 12=Paused Until, 13=Down Acknowledged, 14=Down Partial
                  */
           var history = [];
+
           return this.performPRTGAPIRequest(method, params).then(function (results) {
-            if (!results.histdata) {
-              return history;
-            }
-            var rCnt = results.histdata.item.length;
-            var testdata = results.histdata.item[0];
-            var chanIndex = 0;
 
-            if (testdata.value_raw && testdata.value_raw.length > 0) {
-              //try to get idx numbers on first row, saves cycles.
-              for (var idx = 0; idx < testdata.value_raw.length; idx++) {
-                // this hack specifically applies to bandwidth sensors that track speed AND volume, a better solution remains to be implemented.
-                if (testdata.value_raw[idx].channel.match(channel + " [(]speed[)]") || testdata.value_raw[idx].channel == channel) {
-                  chanIndex = idx;
-                }
-                // 
-                else {
-                    var rex = new RegExp(utils.escapeRegex(channel), 'g');
-                    if (rex.test(testdata.value_raw[idx].channel)) {
-                      chanIndex = idx;
-                    }
-                  }
-              }
+            /*
+            So when we query table.json for the channel names in a sensor, it shows us things like:
+            Traffic in
+            Traffic out
+            Total 
+            ...
+              but when we query the actual data, we get things like
+            Traffic in (volume): <number>
+            Traffic in (speed): <number>
+              so we cannot actually use the channel name as advertised, we have to check for this and use what's in the 
+            historic data object instead.
+            */
+            var channelKey = channel;
+            var keys = Object.keys(results[0]);
+            for (var key in keys) {
+              if (keys[key] == channel + " (speed)") // always true for any network/bandwidth channel
+                channelKey = keys[key]; // Overrides the "channel" name with the "real" name
             }
-
-            for (var iter = 0; iter < rCnt; iter++) {
-              var val = void 0;
-              var prtgDate = results.histdata.item[iter].datetime_raw;
-              var dt = new Date((prtgDate - 25569) * 86400 * 1000);
-              //var dt = Math.round((results.histdata.item[i].datetime_raw - 25568) * 86400,0) * 1000;
-              if (results.histdata.item[iter].value_raw && results.histdata.item[iter].value_raw.length > 0) {
-                //FIXME: better way of dealing with multiple channels of same name
-                //IE you select "Traffic In" but PRTG provides Volume AND Speed channels.
-                /*
-                  for (
-                    let iter2 = 0;
-                    iter2 < results.histdata.item[iter].value_raw.length;
-                    iter2++
-                  ) {
-                    //workaround for SNMP Bandwidth Issue #3. Check for presence of (speed) suffix, and use that.
-                     if (
-                      results.histdata.item[iter].value_raw[iter2].channel.match(
-                        channel + " [(]speed[)]"
-                      ) ||
-                        results.histdata.item[iter].value_raw[iter2].channel == channel
-                    )
-                    {
-                      val = Number(results.histdata.item[iter].value_raw[iter2].text);
-                    }
-                    */
-                val = Number(results.histdata.item[iter].value_raw[chanIndex].text);
-                //            }
-              } else if (results.histdata.item[iter].value_raw) {
-                val = Number(results.histdata.item[iter].value_raw.text);
-              }
+            for (var iter = 0; iter < results.length; iter++) {
               history.push({
                 sensor: sensor,
                 channel: channel,
-                datetime: dt,
-                value: val
+                datetime: Date.parse(results[iter]["datetime"].substr(0, 22)), //moar haxx
+                value: results[iter][channelKey]
               });
             }
             return history;

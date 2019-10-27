@@ -127,9 +127,9 @@ System.register(["lodash", "app/core/utils/datemath", "./PRTGAPIService", "./uti
               if (target.options.mode.name == "Metrics") {
                 return _this.queryMetrics(target, from, to);
               } else if (target.options.mode.name == "Text") {
-                return _this.queryText(target, from, to);
+                return _this.queryText(target);
               } else if (target.options.mode.name == "Raw") {
-                return _this.queryRaw(target, from, to);
+                return _this.queryRaw(target);
               }
             });
             return Promise.all(_.flatten(promises)).then(function (results) {
@@ -138,7 +138,7 @@ System.register(["lodash", "app/core/utils/datemath", "./PRTGAPIService", "./uti
           }
         }, {
           key: "queryRaw",
-          value: function queryRaw(target, from, to) {
+          value: function queryRaw(target) {
             return this.prtgAPI.performPRTGAPIRequest(target.raw.uri, target.raw.queryString).then(function (rawData) {
               if (Array.isArray(rawData)) {
                 return _.map(rawData, function (doc) {
@@ -151,7 +151,7 @@ System.register(["lodash", "app/core/utils/datemath", "./PRTGAPIService", "./uti
           }
         }, {
           key: "queryText",
-          value: function queryText(target, from, to) {
+          value: function queryText(target) {
             /**
              * Get items isn't required
              * case value from: sensor group or device
@@ -179,9 +179,9 @@ System.register(["lodash", "app/core/utils/datemath", "./PRTGAPIService", "./uti
               });
               return _.map(filtered, function (item) {
                 var alias = item[target.options.textValueFrom.name];
-                var decodeText = document.createElement("textarea");
-                decodeText.innerHTML = item[target.options.textProperty.name];
-                return { target: alias, datapoints: [[decodeText.value, Date.now()]] };
+                //const decodeText = document.createElement("textarea"); //dont seem to need this any more.
+                //decodeText.innerHTML = item[target.options.textProperty.name];
+                return { target: alias, datapoints: [[item[target.options.textProperty.name], Date.now()]] };
               });
             });
           }

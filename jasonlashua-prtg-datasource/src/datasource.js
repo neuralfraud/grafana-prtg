@@ -118,16 +118,16 @@ class PRTGDataSource {
       if (target.options.mode.name == "Metrics") {
         return this.queryMetrics(target, from, to);
       } else if (target.options.mode.name == "Text") {
-        return this.queryText(target, from, to);
+        return this.queryText(target);
       } else if (target.options.mode.name == "Raw") {
-        return this.queryRaw(target, from, to);
+        return this.queryRaw(target);
       }
     });
     return Promise.all(_.flatten(promises)).then(results => {
       return { data: _.flatten(results) };
     });
   }
-  queryRaw(target, from, to) {
+  queryRaw(target) {
     return this.prtgAPI
       .performPRTGAPIRequest(target.raw.uri, target.raw.queryString)
       .then(rawData => {
@@ -140,7 +140,7 @@ class PRTGDataSource {
         }
       });
   }
-  queryText(target, from, to) {
+  queryText(target) {
     /**
      * Get items isn't required
      * case value from: sensor group or device
@@ -178,9 +178,9 @@ class PRTGDataSource {
       });
       return _.map(filtered, item => {
         const alias = item[target.options.textValueFrom.name];
-        const decodeText = document.createElement("textarea");
-        decodeText.innerHTML = item[target.options.textProperty.name];
-        return { target: alias, datapoints: [[decodeText.value, Date.now()]] };
+        //const decodeText = document.createElement("textarea"); //dont seem to need this any more.
+        //decodeText.innerHTML = item[target.options.textProperty.name];
+        return { target: alias, datapoints: [[item[target.options.textProperty.name], Date.now()]] };
       });
     });
   }
