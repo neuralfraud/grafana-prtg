@@ -25,7 +25,18 @@ System.register([], function (_export, _context) {
     return false;
   }
 
+  /**
+   * pad date parts and optionally add one
+   */
+
   _export("isTemplateVariable", isTemplateVariable);
+
+  function pad(idx, val) {
+    if (val) return ("0" + (idx + 1)).slice(-2);
+    return ("0" + idx).slice(-2);
+  }
+
+  _export("pad", pad);
 
   function buildRegex(str) {
     var matches = str.match(regexPattern);

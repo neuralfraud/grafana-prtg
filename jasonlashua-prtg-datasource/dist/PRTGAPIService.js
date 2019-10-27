@@ -1,9 +1,9 @@
 "use strict";
 
-System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_export, _context) {
+System.register(["angular", "lodash", "./utils"], function (_export, _context) {
   "use strict";
 
-  var angular, _, utils, XMLXform, _createClass;
+  var angular, _, utils, _createClass;
 
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -92,19 +92,6 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
           return hash;
         }
       }, {
-        key: "pad",
-        value: function pad(idx, val) {
-          if (val) return ("0" + (idx + 1)).slice(-2);
-          return ("0" + idx).slice(-2);
-        }
-      }, {
-        key: "getPRTGDate",
-        value: function getPRTGDate(unixtime) {
-          var dt = new Date(unixtime * 1000);
-          var str = [dt.getFullYear(), this.pad(dt.getMonth(), true), this.pad(dt.getDate()), this.pad(dt.getHours()), this.pad(dt.getMinutes()), this.pad(dt.getSeconds())];
-          return str.join("-");
-        }
-      }, {
         key: "performPRTGAPIRequest",
         value: function performPRTGAPIRequest(method, params) {
           var queryString = "username=" + this.username + "&passhash=" + this.passhash + "&" + params;
@@ -152,7 +139,9 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
                 });
               }
             }, function (error) {
-              return Promise.reject(error.status + ": " + error.statusText);
+              return Promise.reject({
+                message: error.status + ": " + error.statusText
+              });
             }));
           }
         }
@@ -323,26 +312,25 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
 
           return this.getSensors(groupFilter, hostFilter, sensorFilter).then(function (sensors) {
             /**
-             * In this context, if i simply iterate an array with _.each and then execute performPRTGAPIRequest, even
-             * though the returned object is a promise which can be used in a chain, the execution falls outside of the existing
-             * promise chain and thus executs asynchronously. To keep everything in the same execution context, create a
-             * promise array for each object, then execute them in context.
+             * For each sensor, retrieve one count of "values" from table.json - this will include all of the actual
+             * channel names, which are then used to retrieve the data. 
              */
             var promises = _.map(sensors, function (sensor) {
-              var params = "content=channels&columns=sensor,name&id=" + sensor.objid;
+              var params = "content=values&output=json&columns=value_&noraw=1&count=1&usecaption=true&id=" + sensor.objid;
+              //const params = "content=channels&columns=sensor,name&id=" + sensor.objid;
               return _this5.performPRTGAPIRequest("table.json", params).then(function (channels) {
-                /**
-                 * Create an object that contains all of the information necessary to query this metric.
-                 * This information will be used at render time to group the datapoints and name them.
-                 */
-                return Promise.all(_.map(channels, function (channel) {
+                var arrTmp = [];
+                for (var key in Object.keys(channels[0])) {
+                  var channel = {};
                   channel.sensor = sensor.objid;
                   channel.sensor_raw = sensor.sensor;
                   channel.device = sensor.device;
                   channel.group = sensor.group;
+                  channel.name = Object.keys(channels[0])[key];
                   channel.channel = channel.name;
-                  return channel;
-                }));
+                  arrTmp.push(channel);
+                }
+                return Promise.all(arrTmp);
               });
             });
             return Promise.all(promises).then(_.flatten);
@@ -364,6 +352,13 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
         value: function getItemsFromTarget(target) {
           var filtermode = target.options.invertChannelFilter ? true : false;
           return this.getItems(target.group.name, target.device.name, target.sensor.name, target.channel.name, filtermode);
+        }
+      }, {
+        key: "getPRTGDate",
+        value: function getPRTGDate(unixtime) {
+          var dt = new Date(unixtime * 1000);
+          var str = [dt.getFullYear(), utils.pad(dt.getMonth(), true), utils.pad(dt.getDate()), utils.pad(dt.getHours()), utils.pad(dt.getMinutes()), utils.pad(dt.getSeconds())];
+          return str.join("-");
         }
       }, {
         key: "getItemHistory",
@@ -388,31 +383,12 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
           var history = [];
 
           return this.performPRTGAPIRequest(method, params).then(function (results) {
-
-            /*
-            So when we query table.json for the channel names in a sensor, it shows us things like:
-            Traffic in
-            Traffic out
-            Total 
-            ...
-              but when we query the actual data, we get things like
-            Traffic in (volume): <number>
-            Traffic in (speed): <number>
-              so we cannot actually use the channel name as advertised, we have to check for this and use what's in the 
-            historic data object instead.
-            */
-            var channelKey = channel;
-            var keys = Object.keys(results[0]);
-            for (var key in keys) {
-              if (keys[key] == channel + " (speed)") // always true for any network/bandwidth channel
-                channelKey = keys[key]; // Overrides the "channel" name with the "real" name
-            }
             for (var iter = 0; iter < results.length; iter++) {
               history.push({
                 sensor: sensor,
                 channel: channel,
                 datetime: Date.parse(results[iter]["datetime"].substr(0, 22)), //moar haxx
-                value: results[iter][channelKey]
+                value: results[iter][channel]
               });
             }
             return history;
@@ -455,8 +431,6 @@ System.register(["angular", "lodash", "./utils", "./xmlparser"], function (_expo
       _ = _lodash.default;
     }, function (_utils) {
       utils = _utils;
-    }, function (_xmlparser) {
-      XMLXform = _xmlparser.XMLXform;
     }],
     execute: function () {
       _createClass = function () {

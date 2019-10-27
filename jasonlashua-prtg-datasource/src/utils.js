@@ -23,6 +23,14 @@ export function isTemplateVariable(str) {
   return false;
 }
 
+/**
+ * pad date parts and optionally add one
+ */
+export function pad(idx, val) {
+  if (val) return ("0" + (idx + 1)).slice(-2);
+  return ("0" + idx).slice(-2);
+}
+
 export function buildRegex(str) {
   const matches = str.match(regexPattern);
   const pattern = matches[1];

@@ -1,7 +1,7 @@
 import angular from "angular";
 import _ from "lodash";
 import * as utils from "./utils";
-import { XMLXform } from "./xmlparser";
+
 /**
  * PRTG API Service
  * Implements the high level functions that process data from PRTG
@@ -94,33 +94,6 @@ function PRTGAPIService(alertSrv, backendSrv) {
     }
 
     /**
-     * pad date parts and optionally add one
-     */
-    pad(idx, val) {
-      if (val) return ("0" + (idx + 1)).slice(-2);
-      return ("0" + idx).slice(-2);
-    }
-
-    /**
-     * convert a UNIX timestamp into a PRTG date string for queries
-     * YYYY-MM-DD-HH-MM-SS
-     * 
-     * @param unixtime UNIX format timestamp
-     */
-    getPRTGDate(unixtime) {
-      const dt = new Date(unixtime * 1000);
-      const str = [
-        dt.getFullYear(),
-        this.pad(dt.getMonth(), true),
-        this.pad(dt.getDate()),
-        this.pad(dt.getHours()),
-        this.pad(dt.getMinutes()),
-        this.pad(dt.getSeconds())
-      ];
-      return str.join("-");
-    }
-
-    /**
      * Request data from PRTG API
      *
      * @param  method the API method (e.g., table.json)
@@ -186,7 +159,9 @@ function PRTGAPIService(alertSrv, backendSrv) {
               }
             },
             error => {
-              return Promise.reject(error.status + ": " + error.statusText);
+              return Promise.reject({
+                message: error.status + ": " + error.statusText
+              });
             }
           )
         );
@@ -207,31 +182,6 @@ function PRTGAPIService(alertSrv, backendSrv) {
         }
       });
     }
-
-    /**
-     * Authenticate to the PRTG interface
-     * Only used in connection testing because PRTG API is sessionless.
-     * 
-     * @return Promise
-     */
-    /*    performPRTGAPILogin() {
-      const username = this.username;
-      const passhash = this.passhash;
-      const options = {
-        method: "GET",
-        url:
-          this.url +
-          "/getstatus.htm?id=0&username=" +
-          username +
-          "&passhash=" +
-          passhash
-      };
-      return this.backendSrv.datasourceRequest(options).then(response => {
-        this.passhash = response;
-        return response;
-      });
-    }
-    */
 
     /**
      * Query API for list of groups
@@ -426,32 +376,28 @@ function PRTGAPIService(alertSrv, backendSrv) {
         sensorFilter
       ).then(sensors => {
         /**
-         * In this context, if i simply iterate an array with _.each and then execute performPRTGAPIRequest, even
-         * though the returned object is a promise which can be used in a chain, the execution falls outside of the existing
-         * promise chain and thus executs asynchronously. To keep everything in the same execution context, create a
-         * promise array for each object, then execute them in context.
+         * For each sensor, retrieve one count of "values" from table.json - this will include all of the actual
+         * channel names, which are then used to retrieve the data. 
          */
         const promises = _.map(sensors, sensor => {
-          const params =
-            "content=channels&columns=sensor,name&id=" + sensor.objid;
+          const params = "content=values&output=json&columns=value_&noraw=1&count=1&usecaption=true&id="+ sensor.objid 
+          //const params = "content=channels&columns=sensor,name&id=" + sensor.objid;
           return this.performPRTGAPIRequest(
             "table.json",
             params
           ).then(channels => {
-            /**
-             * Create an object that contains all of the information necessary to query this metric.
-             * This information will be used at render time to group the datapoints and name them.
-             */
-            return Promise.all(
-              _.map(channels, channel => {
-                channel.sensor = sensor.objid;
-                channel.sensor_raw = sensor.sensor;
-                channel.device = sensor.device;
-                channel.group = sensor.group;
-                channel.channel = channel.name;
-                return channel;
-              })
-            );
+           let arrTmp = []
+            for (var key in Object.keys(channels[0])) {
+              let channel = {}
+              channel.sensor = sensor.objid;
+              channel.sensor_raw = sensor.sensor;
+              channel.device = sensor.device;
+              channel.group = sensor.group;
+              channel.name = Object.keys(channels[0])[key];
+              channel.channel = channel.name
+              arrTmp.push(channel)
+            }
+            return Promise.all(arrTmp)
           });
         });
         return Promise.all(promises).then(_.flatten);
@@ -505,6 +451,25 @@ function PRTGAPIService(alertSrv, backendSrv) {
     }
 
     /**
+     * convert a UNIX timestamp into a PRTG date string for queries
+     * YYYY-MM-DD-HH-MM-SS
+     * 
+     * @param unixtime UNIX format timestamp
+     */
+    getPRTGDate(unixtime) {
+      const dt = new Date(unixtime * 1000);
+      const str = [
+        dt.getFullYear(),
+        utils.pad(dt.getMonth(), true),
+        utils.pad(dt.getDate()),
+        utils.pad(dt.getHours()),
+        utils.pad(dt.getMinutes()),
+        utils.pad(dt.getSeconds())
+      ];
+      return str.join("-");
+    }    
+
+    /**
      * Retrieve history data from a single sensor.
      * @param {number} sensor - sensor ID
      * @param {string} channel - channel name
@@ -541,34 +506,13 @@ function PRTGAPIService(alertSrv, backendSrv) {
       const history = [];
       
       return this.performPRTGAPIRequest(method, params).then(results => {
-
-        /*
-        So when we query table.json for the channel names in a sensor, it shows us things like:
-        Traffic in
-        Traffic out
-        Total 
-        ...
-
-        but when we query the actual data, we get things like
-        Traffic in (volume): <number>
-        Traffic in (speed): <number>
-
-        so we cannot actually use the channel name as advertised, we have to check for this and use what's in the 
-        historic data object instead.
-        */
-        let channelKey = channel 
-        let keys = Object.keys(results[0])
-        for (var key in keys) {
-          if (keys[key] == (channel + " (speed)")) // always true for any network/bandwidth channel
-            channelKey = keys[key] // Overrides the "channel" name with the "real" name
-        }
         for (let iter = 0; iter < results.length; iter++)
         {
           history.push({
             sensor: sensor,
             channel: channel,
             datetime: Date.parse(results[iter]["datetime"].substr(0,22)), //moar haxx
-            value: results[iter][channelKey] 
+            value: results[iter][channel] 
           });
         }
         return history;

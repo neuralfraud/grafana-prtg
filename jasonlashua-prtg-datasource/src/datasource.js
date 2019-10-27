@@ -18,7 +18,7 @@ class PRTGDataSource {
     //this.tzShift = 0;
     this.tzAutoAdjust = instanceSettings.jsonData.tzAutoAdjust;
     this.username = instanceSettings.jsonData.prtgApiUser;
-    this.passhash = instanceSettings.jsonData.prtgApiPasshash;
+    this.passhash = instanceSettings.jsonData.prtgApiPasshash; //WTF doesn't secureJsonData work? Poorly documented. 
     this.cacheTimeoutMintues =
       instanceSettings.jsonData.cacheTimeoutMinutes || 5;
     this.limitmetrics = instanceSettings.meta.limitmetrics || 100;
@@ -29,14 +29,12 @@ class PRTGDataSource {
       this.cacheTimeoutMintues,
       this.tzAutoAdjust
     );
-    console.log("tz setting: " + this.tzAutoAdjust);
   }
 
   /**
    * Test the datasource
    */
   testDatasource() {
-    console.log("tz setting: " + this.tzAutoAdjust);
     return this.prtgAPI.getVersion().then(
       apiVersion => {
         return {

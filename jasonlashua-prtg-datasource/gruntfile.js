@@ -73,7 +73,6 @@ module.exports = function(grunt) {
     'clean',
     'copy:src_to_dist',
     'copy:pluginDef',
-    'babel',
-    'sass'
+    'babel'
   ]);
 };

@@ -55,11 +55,10 @@ System.register(["lodash", "app/core/utils/datemath", "./PRTGAPIService", "./uti
           //this.tzShift = 0;
           this.tzAutoAdjust = instanceSettings.jsonData.tzAutoAdjust;
           this.username = instanceSettings.jsonData.prtgApiUser;
-          this.passhash = instanceSettings.jsonData.prtgApiPasshash;
+          this.passhash = instanceSettings.jsonData.prtgApiPasshash; //WTF doesn't secureJsonData work? Poorly documented. 
           this.cacheTimeoutMintues = instanceSettings.jsonData.cacheTimeoutMinutes || 5;
           this.limitmetrics = instanceSettings.meta.limitmetrics || 100;
           this.prtgAPI = new PRTGAPIService(this.url, this.username, this.passhash, this.cacheTimeoutMintues, this.tzAutoAdjust);
-          console.log("tz setting: " + this.tzAutoAdjust);
         }
 
         /**
@@ -70,7 +69,6 @@ System.register(["lodash", "app/core/utils/datemath", "./PRTGAPIService", "./uti
         _createClass(PRTGDataSource, [{
           key: "testDatasource",
           value: function testDatasource() {
-            console.log("tz setting: " + this.tzAutoAdjust);
             return this.prtgAPI.getVersion().then(function (apiVersion) {
               return {
 
