@@ -1,15 +1,14 @@
 # Change Log
-## [4.0.4] - 2019-10-25 WIP
+## [4.0.4] - 2019-10-27 WIP
 
 ### Fixed
- - Memory Leak when using Grafana and PRTG plugin [#109](https://github.com/neuralfraud/grafana-prtg/issues/109)
- - 
-
+ - Memory Leak when using Grafana and PRTG plugin [#109](https://github.com/neuralfraud/grafana-prtg/issues/109) 
 
 ### Changed
 
 - Dependency for lodash changed to 4.17.13.
-- Dependency for grafanaVersion changed to 6.2 (mitigates vulnerability in lodash < 4.17.11)
+- Dependency for grafanaVersion changed to 6.3+ (mitigates vulnerability in lodash < 4.17.11)
+- **POTENTIALLY BREAKING**: Plguin retrieves data using *historicdata.json* now, in older versions of PRTG (17.x or older) the JSON was malformed. This appears to have been resolved at some point in the last two years. This should lead to a massive performance increase as it is no longer necessary to parse/transform XML into JSON. 
 
 ### Added
 
