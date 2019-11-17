@@ -387,7 +387,7 @@ System.register(["angular", "lodash", "./utils"], function (_export, _context) {
               history.push({
                 sensor: sensor,
                 channel: channel,
-                datetime: Date.parse(results[iter]["datetime"].substr(0, 22)), //moar haxx
+                datetime: Date.parse(results[iter]["datetime"].match(/(\d+\/\d+\/\d+\s\d+:\d+:\d+\s\w+)\s?/)[1]), //Let's pray there are no Chinese timestamps
                 value: results[iter][channel]
               });
             }
