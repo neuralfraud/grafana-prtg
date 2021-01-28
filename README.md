@@ -3,9 +3,11 @@
 [![GitHub version](https://badge.fury.io/gh/neuralfraud%2Fgrafana-prtg.svg)](https://badge.fury.io/gh/neuralfraud%2Fgrafana-prtg)
 [![Change Log](https://img.shields.io/badge/change-log-blue.svg?style=flat)](https://github.com/neuralfraud/grafana-prtg/blob/master/CHANGELOG.md)
 [![Docs](https://img.shields.io/badge/docs-latest-red.svg?style=flat)](https://github.com/neuralfraud/grafana-prtg/wiki)
-[![Donate](https://img.shields.io/badge/donate-paypal-2c9eda.svg?style=flat&colorA=0b3684)](https://paypal.me/jaylashua/10)
 
 Vizualize your PRTG data with rich, powerful Grafana dashboards!
+
+## Update
+January, 28 2021 - Forked form original developer to carry forward with modernizing plugin for latest versions of Grafana and PRTG.
 
 ## Features
 
